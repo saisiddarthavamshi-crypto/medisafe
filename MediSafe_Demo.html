@@ -1,0 +1,1153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MediSafe – Patient-Held Consent Health Record</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    :root{}
+    body{font-family:'Inter',-apple-system,sans-serif;background:#f0f4f8;}
+    .gradient-hero{background:linear-gradient(135deg,#1e3a8a 0%,#0f766e 50%,#065f46 100%);}
+    .gradient-provider{background:linear-gradient(135deg,#064e3b 0%,#065f46 50%,#0f766e 100%);}
+    .glass{background:rgba(255,255,255,0.97);backdrop-filter:blur(20px);}
+    .card-hover{transition:all 0.3s cubic-bezier(0.4,0,0.2,1);}
+    .card-hover:hover{transform:translateY(-3px);box-shadow:0 16px 32px rgba(0,0,0,0.12);}
+    .pulse-ring{animation:pulse-ring 2s infinite;}
+    @keyframes pulse-ring{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,0.4);}50%{box-shadow:0 0 0 12px rgba(220,38,38,0);}}
+    .slide-in{animation:slideIn 0.4s ease-out;}
+    @keyframes slideIn{from{opacity:0;transform:translateY(20px);}to{opacity:1;transform:translateY(0);}}
+    .allergy-high{background:#fef2f2;border-left:4px solid #dc2626;}
+    .allergy-moderate{background:#fffbeb;border-left:4px solid #f59e0b;}
+    .tab-active{background:#1e40af!important;color:white!important;}
+    .prov-tab-active{background:#059669!important;color:white!important;}
+    .qr-ring{stroke-dasharray:283;transition:stroke-dashoffset 1s linear;}
+    .ai-typing::after{content:'▌';animation:blink 0.8s infinite;}
+    @keyframes blink{0%,100%{opacity:1;}50%{opacity:0;}}
+    .abha-badge{background:linear-gradient(135deg,#1e40af,#7c3aed);}
+    .scan-bar{animation:scanAnim 2s linear infinite;}
+    @keyframes scanAnim{0%{top:0;opacity:0.8;}100%{top:100%;opacity:0;}}
+    .revoke-flash{animation:revokeFlash 0.3s ease;}
+    @keyframes revokeFlash{0%,100%{background:initial;}50%{background:#fef2f2;}}
+    .consent-active{border-left:4px solid #16a34a;}
+    .consent-revoked{border-left:4px solid #dc2626;}
+    .consent-expired{border-left:4px solid #9ca3af;opacity:0.6;}
+    ::-webkit-scrollbar{width:4px;}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px;}
+    @media print{.no-print{display:none!important;}.print-show{display:block!important;}}
+  </style>
+</head>
+<body class="min-h-screen">
+
+<!-- ════════════════════════════════════════
+     SCREEN: ROLE SELECTOR
+════════════════════════════════════════ -->
+<div id="roleScreen" class="min-h-screen gradient-hero flex items-center justify-center p-4">
+  <div class="glass rounded-3xl shadow-2xl p-8 w-full max-w-lg">
+    <div class="text-center mb-8">
+      <div class="w-24 h-24 bg-blue-600 rounded-3xl mx-auto flex items-center justify-center mb-4 shadow-xl">
+        <i class="fas fa-heartbeat text-white text-4xl"></i>
+      </div>
+      <h1 class="text-4xl font-black text-gray-900">MediSafe</h1>
+      <p class="text-gray-500 mt-2">Patient-Held Consent-Driven Health Record</p>
+      <div class="flex justify-center gap-2 mt-3 flex-wrap">
+        <span class="abha-badge text-white text-xs px-3 py-1 rounded-full">🇮🇳 ABHA Ready</span>
+        <span class="bg-green-100 text-green-800 text-xs px-3 py-1 rounded-full">✓ QR Consent</span>
+        <span class="bg-purple-100 text-purple-800 text-xs px-3 py-1 rounded-full">🤖 AI Powered</span>
+      </div>
+    </div>
+    <p class="text-center text-gray-600 text-sm font-medium mb-5">Who are you?</p>
+    <div class="grid grid-cols-2 gap-4">
+      <button onclick="showScreen('patientLogin')" class="flex flex-col items-center gap-3 p-6 bg-blue-50 hover:bg-blue-100 border-2 border-blue-200 rounded-2xl transition card-hover">
+        <div class="w-14 h-14 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200">
+          <i class="fas fa-user text-white text-2xl"></i>
+        </div>
+        <div>
+          <p class="font-bold text-gray-900">Patient</p>
+          <p class="text-xs text-gray-500">Manage & share records</p>
+        </div>
+      </button>
+      <button onclick="showScreen('providerLogin')" class="flex flex-col items-center gap-3 p-6 bg-emerald-50 hover:bg-emerald-100 border-2 border-emerald-200 rounded-2xl transition card-hover">
+        <div class="w-14 h-14 bg-emerald-600 rounded-2xl flex items-center justify-center shadow-lg shadow-emerald-200">
+          <i class="fas fa-user-md text-white text-2xl"></i>
+        </div>
+        <div>
+          <p class="font-bold text-gray-900">Provider</p>
+          <p class="text-xs text-gray-500">Access patient records</p>
+        </div>
+      </button>
+    </div>
+    <div class="mt-5 bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-800 text-center">
+      <i class="fas fa-info-circle mr-1"></i>
+      Hackathon Demo – Pre-loaded with sample patient data
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SCREEN: PATIENT LOGIN
+════════════════════════════════════════ -->
+<div id="patientLogin" class="hidden min-h-screen gradient-hero flex items-center justify-center p-4">
+  <div class="glass rounded-3xl shadow-2xl p-8 w-full max-w-md">
+    <button onclick="showScreen('roleScreen')" class="text-gray-400 hover:text-gray-600 mb-4 text-sm"><i class="fas fa-arrow-left mr-1"></i>Back</button>
+    <div class="text-center mb-6">
+      <div class="w-16 h-16 bg-blue-600 rounded-2xl mx-auto flex items-center justify-center mb-3">
+        <i class="fas fa-user text-white text-2xl"></i>
+      </div>
+      <h2 class="text-2xl font-bold text-gray-900">Patient Login</h2>
+      <p class="text-gray-500 text-sm">Access your health records</p>
+    </div>
+    <div class="space-y-4">
+      <div>
+        <label class="text-sm font-medium text-gray-700 block mb-1">Patient ID / ABHA ID / Phone</label>
+        <input id="patLoginId" type="text" value="PAT-2024-001" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50 text-gray-900">
+      </div>
+      <div>
+        <label class="text-sm font-medium text-gray-700 block mb-1">Password</label>
+        <input id="patLoginPass" type="password" value="patient123" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50">
+      </div>
+      <button onclick="loginPatient()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-bold transition shadow-lg shadow-blue-200">
+        <i class="fas fa-lock-open mr-2"></i>Access My Records
+      </button>
+      <p class="text-center text-xs text-gray-400">Demo: <code class="bg-gray-100 px-1 rounded">PAT-2024-001</code> / <code class="bg-gray-100 px-1 rounded">patient123</code></p>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SCREEN: PATIENT APP
+════════════════════════════════════════ -->
+<div id="patientApp" class="hidden min-h-screen">
+  <header class="gradient-hero text-white sticky top-0 z-40 shadow-lg">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center"><i class="fas fa-heartbeat text-white text-sm"></i></div>
+        <div><h1 class="font-bold leading-none">MediSafe</h1><p class="text-blue-200 text-xs" id="hdr-abha">ABHA-12-3456-7890-12</p></div>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="patTab('emergency')" class="pulse-ring bg-red-500 text-white text-xs px-3 py-1.5 rounded-full font-bold">🆘 SOS</button>
+        <button onclick="showScreen('roleScreen')" class="text-white/60 hover:text-white text-sm"><i class="fas fa-sign-out-alt"></i></button>
+      </div>
+    </div>
+    <nav class="max-w-5xl mx-auto px-4 pb-2 flex gap-1 overflow-x-auto">
+      <button onclick="patTab('home')" id="pt-home" class="tab-active text-xs px-3 py-1.5 rounded-full whitespace-nowrap font-medium bg-white/10 text-white transition"><i class="fas fa-home mr-1"></i>Dashboard</button>
+      <button onclick="patTab('share')" id="pt-share" class="text-xs px-3 py-1.5 rounded-full whitespace-nowrap font-medium bg-white/10 text-white transition hover:bg-white/20"><i class="fas fa-qrcode mr-1"></i>QR Share</button>
+      <button onclick="patTab('records')" id="pt-records" class="text-xs px-3 py-1.5 rounded-full whitespace-nowrap font-medium bg-white/10 text-white transition hover:bg-white/20"><i class="fas fa-file-medical mr-1"></i>Records</button>
+      <button onclick="patTab('consents')" id="pt-consents" class="text-xs px-3 py-1.5 rounded-full whitespace-nowrap font-medium bg-white/10 text-white transition hover:bg-white/20"><i class="fas fa-shield-alt mr-1"></i>Consents</button>
+      <button onclick="patTab('ai')" id="pt-ai" class="text-xs px-3 py-1.5 rounded-full whitespace-nowrap font-medium bg-white/10 text-white transition hover:bg-white/20"><i class="fas fa-robot mr-1"></i>AI Chat</button>
+      <button onclick="patTab('logs')" id="pt-logs" class="text-xs px-3 py-1.5 rounded-full whitespace-nowrap font-medium bg-white/10 text-white transition hover:bg-white/20"><i class="fas fa-history mr-1"></i>Access Log</button>
+    </nav>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 py-5">
+
+    <!-- ── HOME ── -->
+    <div id="pt-home-c" class="slide-in">
+      <div class="gradient-hero rounded-2xl p-5 text-white mb-4 shadow-xl">
+        <div class="flex items-start justify-between">
+          <div>
+            <p class="text-blue-200 text-xs">Patient Health Record</p>
+            <h2 class="text-3xl font-black mt-1" id="ph-name">Priya Sharma</h2>
+            <p class="text-blue-200 text-sm mt-0.5" id="ph-dob">DOB: 15-Apr-1990 · Female</p>
+          </div>
+          <div class="text-right space-y-1">
+            <div class="abha-badge rounded-xl px-3 py-1.5 text-center"><p class="text-blue-200 text-xs">ABHA ID</p><p class="font-mono font-bold text-xs" id="ph-abha">ABHA-12-3456-7890-12</p></div>
+            <div class="bg-white/20 rounded-xl px-3 py-1.5 text-center"><p class="text-blue-100 text-xs">Blood Group</p><p class="font-black text-xl" id="ph-blood">B+</p></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="ph-allergy-alert" class="bg-red-50 border border-red-200 rounded-2xl p-4 mb-4">
+        <div class="flex gap-3">
+          <div class="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0"><i class="fas fa-exclamation-triangle text-red-600"></i></div>
+          <div><p class="font-bold text-red-800">⚠️ Known Allergies</p><p class="text-red-700 text-sm mt-0.5" id="ph-allergy-text">Penicillin (High) • Sulfa drugs (Moderate)</p></div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4">
+        <div onclick="patTab('records')" class="glass rounded-2xl p-4 card-hover shadow-sm cursor-pointer"><div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center mb-2"><i class="fas fa-pills text-blue-600"></i></div><p class="text-2xl font-black text-gray-900" id="stat-meds">2</p><p class="text-gray-500 text-xs">Active Meds</p></div>
+        <div onclick="patTab('records')" class="glass rounded-2xl p-4 card-hover shadow-sm cursor-pointer"><div class="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center mb-2"><i class="fas fa-allergies text-red-600"></i></div><p class="text-2xl font-black text-gray-900" id="stat-allg">2</p><p class="text-gray-500 text-xs">Allergies</p></div>
+        <div onclick="patTab('records')" class="glass rounded-2xl p-4 card-hover shadow-sm cursor-pointer"><div class="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center mb-2"><i class="fas fa-stethoscope text-purple-600"></i></div><p class="text-2xl font-black text-gray-900" id="stat-cond">2</p><p class="text-gray-500 text-xs">Conditions</p></div>
+        <div onclick="patTab('consents')" class="glass rounded-2xl p-4 card-hover shadow-sm cursor-pointer"><div class="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center mb-2"><i class="fas fa-shield-check text-green-600"></i></div><p class="text-2xl font-black text-gray-900" id="stat-cons">0</p><p class="text-gray-500 text-xs">Active Consents</p></div>
+      </div>
+
+      <div class="glass rounded-2xl p-5 shadow-sm mb-4">
+        <h3 class="font-bold text-gray-900 mb-4">Quick Actions</h3>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <button onclick="patTab('share')" class="flex flex-col items-center gap-2 p-4 bg-blue-50 rounded-xl hover:bg-blue-100 transition card-hover"><div class="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center shadow-md shadow-blue-200"><i class="fas fa-qrcode text-white text-xl"></i></div><span class="text-xs font-bold text-blue-800">Share QR</span></button>
+          <button onclick="revokeAll()" class="flex flex-col items-center gap-2 p-4 bg-red-50 rounded-xl hover:bg-red-100 transition card-hover"><div class="w-12 h-12 bg-red-500 rounded-xl flex items-center justify-center shadow-md shadow-red-200"><i class="fas fa-ban text-white text-xl"></i></div><span class="text-xs font-bold text-red-800">Revoke All</span></button>
+          <button onclick="patTab('ai')" class="flex flex-col items-center gap-2 p-4 bg-purple-50 rounded-xl hover:bg-purple-100 transition card-hover"><div class="w-12 h-12 bg-purple-600 rounded-xl flex items-center justify-center shadow-md shadow-purple-200"><i class="fas fa-robot text-white text-xl"></i></div><span class="text-xs font-bold text-purple-800">AI Health Chat</span></button>
+          <button onclick="patTab('logs')" class="flex flex-col items-center gap-2 p-4 bg-green-50 rounded-xl hover:bg-green-100 transition card-hover"><div class="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center shadow-md shadow-green-200"><i class="fas fa-eye text-white text-xl"></i></div><span class="text-xs font-bold text-green-800">Who Accessed?</span></button>
+        </div>
+      </div>
+
+      <div class="glass rounded-2xl p-5 shadow-sm">
+        <h3 class="font-bold text-gray-900 mb-3">Last Visit</h3>
+        <div class="bg-blue-50 rounded-xl p-4">
+          <p class="font-bold text-gray-900">District Hospital, Dr. Sunita Rao</p>
+          <p class="text-gray-500 text-xs mt-0.5">20 Feb 2024 · BP Follow-up</p>
+          <p class="text-gray-700 text-sm mt-2"><span class="font-medium">Diagnosis:</span> Hypertension – Controlled</p>
+          <p class="text-gray-700 text-sm"><span class="font-medium">Prescription:</span> Continue Amlodipine 5mg</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── QR SHARE ── -->
+    <div id="pt-share-c" class="hidden slide-in">
+      <div class="glass rounded-2xl p-5 shadow-sm mb-4">
+        <h2 class="text-xl font-bold text-gray-900 mb-1">Share Your Health Record</h2>
+        <p class="text-gray-500 text-sm mb-5">Generate a time-limited QR code for your provider to scan at point of care</p>
+        <div class="grid sm:grid-cols-3 gap-3 mb-5">
+          <div>
+            <label class="text-sm font-medium text-gray-700 block mb-1">Access Scope</label>
+            <select id="qr-scope" class="w-full px-3 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+              <option value="summary">📋 Summary (Recommended)</option>
+              <option value="full">📁 Full Records</option>
+              <option value="emergency">🆘 Emergency Only</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-gray-700 block mb-1">Expires In</label>
+            <select id="qr-exp" class="w-full px-3 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+              <option value="5">5 minutes</option>
+              <option value="10" selected>10 minutes</option>
+              <option value="30">30 minutes</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-gray-700 block mb-1">Visit Note</label>
+            <input id="qr-note" type="text" placeholder="e.g. Fever, Diabetes review" class="w-full px-3 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+          </div>
+        </div>
+        <div class="flex gap-3 flex-wrap">
+          <button onclick="generateQR()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-xl font-bold transition shadow-lg shadow-blue-200 flex items-center justify-center gap-2">
+            <i class="fas fa-qrcode"></i> Generate QR Code
+          </button>
+          <button onclick="revokeAll()" class="bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white py-3 px-4 rounded-xl font-bold transition flex items-center gap-2">
+            <i class="fas fa-ban"></i> Revoke All Access
+          </button>
+        </div>
+      </div>
+
+      <div id="qr-result" class="hidden glass rounded-2xl p-5 shadow-sm text-center">
+        <div class="flex items-center justify-center gap-2 mb-2">
+          <div id="qr-status-dot" class="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
+          <span id="qr-status-text" class="text-green-700 font-bold text-sm">Consent Active – Show QR to provider</span>
+        </div>
+        <p class="text-gray-500 text-xs mb-4" id="qr-expiry-text">–</p>
+
+        <div class="flex justify-center mb-4">
+          <div class="bg-white border-4 border-blue-100 rounded-2xl p-3 shadow-xl inline-block" id="qr-canvas-wrap"></div>
+        </div>
+
+        <div class="bg-blue-50 rounded-xl p-3 mb-4 text-left">
+          <p class="text-xs font-medium text-blue-700 mb-1">🔑 Consent Token (Provider pastes this)</p>
+          <div class="flex gap-2">
+            <code id="qr-token-display" class="text-blue-900 text-xs break-all font-mono flex-1 bg-white rounded-lg p-2 border border-blue-100">–</code>
+            <button onclick="copyToken()" class="bg-blue-600 text-white px-3 rounded-lg text-xs font-medium hover:bg-blue-700 transition">Copy</button>
+          </div>
+        </div>
+
+        <div id="qr-scope-desc" class="bg-amber-50 rounded-xl p-3 mb-4 text-left text-xs text-amber-800 border border-amber-100"></div>
+
+        <!-- Countdown -->
+        <div class="flex items-center justify-center gap-4 mb-4">
+          <svg class="w-16 h-16 -rotate-90" viewBox="0 0 36 36">
+            <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e5e7eb" stroke-width="3"/>
+            <circle id="cd-ring" cx="18" cy="18" r="15.9" fill="none" stroke="#1e40af" stroke-width="3.5" stroke-dasharray="100" stroke-dashoffset="0" class="qr-ring"/>
+          </svg>
+          <div class="text-left">
+            <p class="text-3xl font-black text-gray-900" id="cd-time">–</p>
+            <p class="text-xs text-gray-500">remaining</p>
+          </div>
+        </div>
+
+        <button onclick="revokeCurrentQR()" id="revoke-qr-btn"
+          class="w-full bg-white text-red-600 border-2 border-red-300 hover:bg-red-600 hover:text-white hover:border-red-600 py-3 rounded-xl font-black text-sm transition-all">
+          🚫 REVOKE THIS QR NOW – Deny Provider Access
+        </button>
+      </div>
+    </div>
+
+    <!-- ── RECORDS ── -->
+    <div id="pt-records-c" class="hidden slide-in">
+      <div class="flex gap-2 overflow-x-auto pb-2 mb-4">
+        <button onclick="recTab('allergies')" id="rt-allergies" class="rt-btn text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap bg-red-500 text-white">🚨 Allergies</button>
+        <button onclick="recTab('conditions')" id="rt-conditions" class="rt-btn text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap bg-gray-200 text-gray-700 hover:bg-purple-100">🩺 Conditions</button>
+        <button onclick="recTab('medications')" id="rt-medications" class="rt-btn text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap bg-gray-200 text-gray-700 hover:bg-blue-100">💊 Medications</button>
+        <button onclick="recTab('labs')" id="rt-labs" class="rt-btn text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap bg-gray-200 text-gray-700 hover:bg-yellow-100">🔬 Lab Results</button>
+        <button onclick="recTab('visits')" id="rt-visits" class="rt-btn text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap bg-gray-200 text-gray-700 hover:bg-green-100">🏥 Visits</button>
+        <button onclick="recTab('vaccines')" id="rt-vaccines" class="rt-btn text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap bg-gray-200 text-gray-700 hover:bg-teal-100">💉 Vaccines</button>
+      </div>
+      <div id="rc-allergies" class="space-y-3"></div>
+      <div id="rc-conditions" class="space-y-3 hidden"></div>
+      <div id="rc-medications" class="space-y-3 hidden"></div>
+      <div id="rc-labs" class="space-y-3 hidden"></div>
+      <div id="rc-visits" class="space-y-3 hidden"></div>
+      <div id="rc-vaccines" class="space-y-3 hidden"></div>
+    </div>
+
+    <!-- ── CONSENTS ── -->
+    <div id="pt-consents-c" class="hidden slide-in">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold text-gray-900">Consent Management</h2>
+        <button onclick="revokeAll()" class="bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white text-sm px-4 py-2 rounded-xl font-bold transition flex items-center gap-2">
+          <i class="fas fa-ban"></i> Revoke All
+        </button>
+      </div>
+      <div id="consents-list" class="space-y-3">
+        <div class="text-center py-8 text-gray-400"><i class="fas fa-shield-alt text-4xl opacity-30 mb-3 block"></i><p>No consents yet. Generate a QR code to share records.</p></div>
+      </div>
+    </div>
+
+    <!-- ── AI CHAT ── -->
+    <div id="pt-ai-c" class="hidden slide-in">
+      <div class="glass rounded-2xl shadow-sm overflow-hidden">
+        <div class="gradient-hero p-4 text-white">
+          <h2 class="font-bold text-lg"><i class="fas fa-robot mr-2"></i>AI Health Assistant</h2>
+          <p class="text-blue-200 text-xs mt-0.5">Ask about your medications, test results, or health history</p>
+        </div>
+        <div id="ai-chat" class="p-4 space-y-3 min-h-64 max-h-80 overflow-y-auto bg-gray-50">
+          <div class="flex gap-2">
+            <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0"><i class="fas fa-robot text-blue-600 text-xs"></i></div>
+            <div class="bg-white rounded-2xl rounded-tl-sm p-3 shadow-sm max-w-xs">
+              <p class="text-gray-700 text-sm">Hello Priya! 👋 I'm your AI health assistant. I can help you understand your medical records, medications, and test results. What would you like to know?</p>
+            </div>
+          </div>
+        </div>
+        <div class="p-4 bg-white border-t border-gray-100">
+          <div class="flex gap-2 overflow-x-auto pb-2 mb-2">
+            <button onclick="aiAsk('What are my active medications?')" class="text-xs bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-blue-100 transition">💊 Active meds?</button>
+            <button onclick="aiAsk('What allergies do I have?')" class="text-xs bg-red-50 text-red-700 px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-red-100 transition">🚨 My allergies?</button>
+            <button onclick="aiAsk('What were my last lab results?')" class="text-xs bg-yellow-50 text-yellow-700 px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-yellow-100 transition">🔬 Lab results?</button>
+            <button onclick="aiAsk('Am I safe to take ibuprofen?')" class="text-xs bg-orange-50 text-orange-700 px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-orange-100 transition">💊 Drug safety?</button>
+          </div>
+          <div class="flex gap-2">
+            <input id="ai-input" type="text" placeholder="Ask about your health records..." class="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50" onkeypress="if(event.key==='Enter')sendAIMsg()">
+            <button onclick="sendAIMsg()" class="bg-blue-600 text-white px-4 py-2.5 rounded-xl hover:bg-blue-700 transition"><i class="fas fa-paper-plane"></i></button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ACCESS LOGS ── -->
+    <div id="pt-logs-c" class="hidden slide-in">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold text-gray-900">Access Log</h2>
+        <span class="text-xs text-gray-400">Full audit trail of who accessed your records</span>
+      </div>
+      <div id="logs-list" class="space-y-2">
+        <div class="text-center py-8 text-gray-400"><i class="fas fa-history text-4xl opacity-30 mb-3 block"></i><p>No access events yet.</p></div>
+      </div>
+    </div>
+
+    <!-- ── EMERGENCY ── -->
+    <div id="pt-emergency-c" class="hidden slide-in">
+      <div class="bg-red-600 rounded-2xl p-5 text-white mb-4 shadow-xl">
+        <h2 class="text-xl font-bold mb-1">🆘 Emergency Information</h2>
+        <p class="text-red-200 text-sm">Critical medical information for first responders – no consent needed</p>
+      </div>
+      <div class="space-y-3">
+        <div class="allergy-high rounded-2xl p-4">
+          <h3 class="font-bold text-red-800 mb-2 text-lg">🚨 ALLERGIES – CRITICAL</h3>
+          <div class="space-y-1">
+            <div class="flex gap-2 items-center"><span class="font-black text-red-700">Penicillin</span><span class="text-red-600 text-sm">→ Anaphylaxis (HIGH RISK)</span></div>
+            <div class="flex gap-2 items-center"><span class="font-black text-orange-700">Sulfa drugs</span><span class="text-orange-600 text-sm">→ Skin rash (MODERATE)</span></div>
+          </div>
+        </div>
+        <div class="glass rounded-2xl p-4 shadow-sm">
+          <h3 class="font-bold text-gray-900 mb-2">💊 Active Medications</h3>
+          <div class="space-y-1 text-sm"><div class="flex gap-2"><span class="font-medium">Metformin 500mg</span><span class="text-gray-500">– Twice daily with meals</span></div><div class="flex gap-2"><span class="font-medium">Amlodipine 5mg</span><span class="text-gray-500">– Once daily morning</span></div></div>
+        </div>
+        <div class="glass rounded-2xl p-4 shadow-sm">
+          <h3 class="font-bold text-gray-900 mb-2">🩺 Conditions</h3>
+          <div class="space-y-1 text-sm"><p><strong>Type 2 Diabetes</strong> (Ongoing) – HbA1c monitored quarterly</p><p><strong>Hypertension</strong> (Controlled) – On medication</p></div>
+        </div>
+        <div class="glass rounded-2xl p-4 shadow-sm border-2 border-orange-200">
+          <h3 class="font-bold text-gray-900 mb-2">🆘 Emergency Contact</h3>
+          <p class="font-bold text-lg">Ramesh Sharma</p>
+          <p class="text-gray-600 text-sm">Husband · <a href="tel:+919876543211" class="text-blue-600 font-mono">+91-9876543211</a></p>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- ════════════════════════════════════════
+     SCREEN: PROVIDER LOGIN
+════════════════════════════════════════ -->
+<div id="providerLogin" class="hidden min-h-screen gradient-provider flex items-center justify-center p-4">
+  <div class="glass rounded-3xl shadow-2xl p-8 w-full max-w-md">
+    <button onclick="showScreen('roleScreen')" class="text-gray-400 hover:text-gray-600 mb-4 text-sm"><i class="fas fa-arrow-left mr-1"></i>Back</button>
+    <div class="text-center mb-6">
+      <div class="w-16 h-16 bg-emerald-600 rounded-2xl mx-auto flex items-center justify-center mb-3">
+        <i class="fas fa-user-md text-white text-2xl"></i>
+      </div>
+      <h2 class="text-2xl font-bold text-gray-900">Provider Login</h2>
+      <p class="text-gray-500 text-sm">PHC · Private Clinic · District Hospital</p>
+    </div>
+    <div class="space-y-4">
+      <div>
+        <label class="text-sm font-medium text-gray-700 block mb-1">Provider ID</label>
+        <input id="prov-id" type="text" value="DR-PHC-001" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-gray-50 text-gray-900">
+      </div>
+      <div>
+        <label class="text-sm font-medium text-gray-700 block mb-1">Password</label>
+        <input id="prov-pass" type="password" value="provider123" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-gray-50">
+      </div>
+      <button onclick="loginProvider()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-bold transition shadow-lg shadow-emerald-200">
+        <i class="fas fa-sign-in-alt mr-2"></i>Login
+      </button>
+      <div class="text-center text-xs text-gray-400 space-y-0.5">
+        <p>PHC: <code class="bg-gray-100 px-1 rounded">DR-PHC-001</code> / <code class="bg-gray-100 px-1 rounded">provider123</code></p>
+        <p>Clinic: <code class="bg-gray-100 px-1 rounded">DR-PRIV-001</code> / <code class="bg-gray-100 px-1 rounded">provider123</code></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════
+     SCREEN: PROVIDER APP
+════════════════════════════════════════ -->
+<div id="providerApp" class="hidden min-h-screen">
+  <header class="gradient-provider text-white sticky top-0 z-40 shadow-lg">
+    <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center"><i class="fas fa-user-md text-white text-sm"></i></div>
+        <div><h1 class="font-bold leading-none" id="prov-name">Dr. Arun Kumar</h1><p class="text-emerald-200 text-xs" id="prov-fac">PHC Sector 5</p></div>
+      </div>
+      <div class="flex gap-2">
+        <button onclick="provSection('scan')" class="bg-white/20 text-white text-xs px-4 py-1.5 rounded-full font-medium hover:bg-white/30 transition">+ New Patient</button>
+        <button onclick="showScreen('roleScreen')" class="text-white/60 hover:text-white"><i class="fas fa-sign-out-alt"></i></button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto px-4 py-5">
+    <!-- ── SCAN / TOKEN ── -->
+    <div id="prov-scan" class="slide-in">
+      <div class="glass rounded-2xl p-5 shadow-sm mb-4">
+        <h2 class="text-xl font-bold text-gray-900 mb-1">Access Patient Records</h2>
+        <p class="text-gray-500 text-sm mb-5">Patient shows QR → scan or paste the consent token</p>
+
+        <div class="bg-emerald-50 border-2 border-emerald-200 rounded-2xl p-8 text-center mb-5 relative overflow-hidden">
+          <div class="absolute inset-x-0 top-0 h-1 bg-emerald-400 scan-bar opacity-50"></div>
+          <i class="fas fa-qrcode text-emerald-400 text-6xl mb-3 opacity-70"></i>
+          <p class="text-emerald-800 font-bold">Patient's QR Code</p>
+          <p class="text-emerald-600 text-sm mt-1">Scan with device camera app, then paste the token below</p>
+        </div>
+
+        <div class="space-y-3">
+          <div>
+            <label class="text-sm font-medium text-gray-700 block mb-1">Paste Consent Token from Patient QR</label>
+            <div class="flex gap-2">
+              <input id="prov-token" type="text" placeholder="Paste token here..." class="flex-1 px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-gray-50 font-mono text-sm text-gray-900">
+              <button onclick="accessPatient()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 rounded-xl font-bold transition shadow-md">
+                <i class="fas fa-search mr-1"></i>Access
+              </button>
+            </div>
+          </div>
+          <div class="bg-blue-50 rounded-xl p-3 text-xs text-blue-700">
+            <i class="fas fa-info-circle mr-1"></i>
+            The token grants temporary, patient-consented access. Access automatically expires and can be revoked by the patient at any time.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PATIENT RECORDS ── -->
+    <div id="prov-records" class="hidden slide-in">
+
+      <div class="gradient-provider rounded-2xl p-5 text-white mb-4 shadow-xl">
+        <div class="flex items-start justify-between">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <div id="prov-access-dot" class="w-2.5 h-2.5 bg-green-400 rounded-full animate-pulse"></div>
+              <span class="text-emerald-200 text-xs" id="prov-access-status">Consent Active</span>
+              <span id="prov-scope-badge" class="bg-white/20 text-white text-xs px-2 py-0.5 rounded-full"></span>
+            </div>
+            <h2 class="text-2xl font-black" id="pv-name">–</h2>
+            <p class="text-emerald-200 text-sm" id="pv-dob">–</p>
+            <p class="text-emerald-200 font-mono text-xs mt-0.5" id="pv-abha">–</p>
+          </div>
+          <div class="text-right">
+            <div class="bg-white/20 rounded-xl px-3 py-1.5 text-center mb-1"><p class="text-emerald-200 text-xs">Blood Group</p><p class="font-black text-2xl" id="pv-blood">–</p></div>
+            <div class="bg-white/10 rounded-lg px-3 py-1 text-center"><p class="text-xs text-emerald-200">Expires</p><p class="text-xs font-mono" id="pv-exp">–</p></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="pv-allergy-alert" class="hidden allergy-high rounded-2xl p-4 mb-4">
+        <p class="font-black text-red-800 text-lg">⚠️ ALLERGY ALERT</p>
+        <div id="pv-allergy-list" class="mt-1 space-y-1"></div>
+      </div>
+
+      <!-- AI Clinical Summary -->
+      <div class="glass rounded-2xl p-4 mb-4 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-bold text-gray-900 flex items-center gap-2">
+            <span class="w-8 h-8 bg-purple-100 rounded-lg flex items-center justify-center"><i class="fas fa-robot text-purple-600 text-xs"></i></span>
+            AI Clinical Summary
+          </h3>
+          <button onclick="genProvAI()" class="text-xs bg-purple-50 text-purple-700 border border-purple-200 px-3 py-1.5 rounded-lg hover:bg-purple-100 transition font-medium">
+            ✨ Generate
+          </button>
+        </div>
+        <div id="pv-ai-box" class="bg-gray-50 rounded-xl p-3 text-sm text-gray-500 min-h-12">
+          Click Generate for AI clinical summary of this patient's records...
+        </div>
+        <div class="mt-3 flex gap-2">
+          <input id="pv-ai-q" type="text" placeholder="Ask AI about this patient..." class="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-500 outline-none bg-gray-50" onkeypress="if(event.key==='Enter')provAsk()">
+          <button onclick="provAsk()" class="bg-purple-600 text-white px-4 rounded-xl hover:bg-purple-700 transition text-sm font-medium">Ask</button>
+        </div>
+        <div class="mt-2 flex gap-1.5 overflow-x-auto pb-1">
+          <button onclick="document.getElementById('pv-ai-q').value='Safe to prescribe Ibuprofen?';provAsk()" class="text-xs bg-orange-50 text-orange-700 px-2.5 py-1 rounded-full whitespace-nowrap hover:bg-orange-100 transition">Safe for Ibuprofen?</button>
+          <button onclick="document.getElementById('pv-ai-q').value='Current diabetes status?';provAsk()" class="text-xs bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full whitespace-nowrap hover:bg-blue-100 transition">Diabetes status?</button>
+          <button onclick="document.getElementById('pv-ai-q').value='Any drug interactions to be aware of?';provAsk()" class="text-xs bg-red-50 text-red-700 px-2.5 py-1 rounded-full whitespace-nowrap hover:bg-red-100 transition">Drug interactions?</button>
+        </div>
+      </div>
+
+      <!-- Record Tabs -->
+      <div class="flex gap-2 overflow-x-auto pb-2 mb-4">
+        <button onclick="provRecTab('meds')" class="prov-tab prov-tab-active text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap">💊 Medications</button>
+        <button onclick="provRecTab('allergies')" class="prov-tab bg-gray-200 text-gray-700 text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap">🚨 Allergies</button>
+        <button onclick="provRecTab('conditions')" class="prov-tab bg-gray-200 text-gray-700 text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap">🩺 Conditions</button>
+        <button onclick="provRecTab('labs')" class="prov-tab bg-gray-200 text-gray-700 text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap">🔬 Labs</button>
+        <button onclick="provRecTab('visits')" class="prov-tab bg-gray-200 text-gray-700 text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap">📅 Visits</button>
+      </div>
+      <div id="pv-meds" class="space-y-2"></div>
+      <div id="pv-allergies" class="space-y-2 hidden"></div>
+      <div id="pv-conditions" class="space-y-2 hidden"></div>
+      <div id="pv-labs" class="space-y-2 hidden"></div>
+      <div id="pv-visits" class="space-y-2 hidden"></div>
+
+      <!-- Add Record -->
+      <div class="glass rounded-2xl p-5 mt-4 shadow-sm">
+        <h3 class="font-bold text-gray-900 mb-3 flex items-center gap-2"><span class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center"><i class="fas fa-plus text-blue-600 text-xs"></i></span>Add to Patient Record</h3>
+        <div class="space-y-3">
+          <select id="rec-type" class="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
+            <option value="visit">📅 Consultation / Visit Notes</option>
+            <option value="medication">💊 New Prescription</option>
+            <option value="lab">🔬 Lab Result</option>
+            <option value="allergy">🚨 New Allergy Observed</option>
+          </select>
+          <textarea id="rec-data" placeholder="Enter details (diagnosis, prescription, notes...)" class="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 h-20 resize-none focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+          <button onclick="addRecord()" class="w-full bg-blue-600 text-white py-2.5 rounded-xl font-bold hover:bg-blue-700 transition text-sm shadow-md">
+            <i class="fas fa-save mr-2"></i>Save to Patient's Record
+          </button>
+        </div>
+      </div>
+
+      <div class="flex gap-3 mt-4">
+        <button onclick="provSection('scan')" class="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-bold hover:bg-gray-200 transition text-sm">
+          <i class="fas fa-arrow-left mr-2"></i>New Patient
+        </button>
+        <button onclick="window.print()" class="bg-blue-600 text-white py-3 px-6 rounded-xl font-bold transition text-sm shadow-lg">
+          <i class="fas fa-print mr-2"></i>Print
+        </button>
+      </div>
+    </div>
+
+    <!-- ── REVOKED / DENIED ── -->
+    <div id="prov-denied" class="hidden slide-in">
+      <div class="glass rounded-2xl p-8 text-center shadow-sm">
+        <div class="w-20 h-20 bg-red-100 rounded-full mx-auto flex items-center justify-center mb-4 shadow-inner">
+          <i class="fas fa-ban text-red-600 text-3xl"></i>
+        </div>
+        <h2 class="text-2xl font-black text-red-700 mb-2" id="denied-title">Access Denied</h2>
+        <p class="text-gray-600 mb-4" id="denied-msg">The patient has revoked this consent.</p>
+        <div class="bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700 mb-5">
+          <i class="fas fa-info-circle mr-1"></i>Ask the patient to generate a new QR code to grant access.
+        </div>
+        <button onclick="provSection('scan')" class="bg-gray-900 text-white px-6 py-3 rounded-xl hover:bg-gray-700 transition font-bold">
+          <i class="fas fa-qrcode mr-2"></i>Scan Another Patient
+        </button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="fixed bottom-5 right-4 z-50 pointer-events-none">
+  <div id="toast-msg" class="hidden bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-2xl text-sm font-medium flex items-center gap-2 max-w-xs"></div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+const USERS = {
+  patients: {
+    'PAT-2024-001': { pass:'patient123', abhaId:'ABHA-12-3456-7890-12', name:'Priya Sharma', dob:'15-Apr-1990', gender:'Female', bloodGroup:'B+', phone:'+91-9876543210', emergencyContact:{name:'Ramesh Sharma',relation:'Husband',phone:'+91-9876543211'},
+      medicalHistory:{
+        allergies:[{substance:'Penicillin',severity:'High',reaction:'Anaphylaxis',recordedAt:'10-Mar-2020',recordedBy:'Dr. Meena Patel, Apollo Clinic'},{substance:'Sulfa drugs',severity:'Moderate',reaction:'Skin rash',recordedAt:'22-Jul-2021',recordedBy:'Dr. Arun Kumar, PHC Sector 5'}],
+        conditions:[{name:'Type 2 Diabetes',diagnosedAt:'01-Aug-2019',status:'Ongoing',notes:'HbA1c monitored quarterly',recordedBy:'Dr. Meena Patel'},{name:'Hypertension',diagnosedAt:'15-Jan-2021',status:'Controlled',notes:'On medication',recordedBy:'Dr. Sunita Rao, District Hospital'}],
+        medications:[{name:'Metformin 500mg',dosage:'Twice daily with meals',startDate:'01-Aug-2019',prescribedBy:'Dr. Meena Patel',status:'Active'},{name:'Amlodipine 5mg',dosage:'Once daily morning',startDate:'15-Jan-2021',prescribedBy:'Dr. Sunita Rao',status:'Active'},{name:'Paracetamol 500mg',dosage:'As needed',startDate:'05-Nov-2022',prescribedBy:'Dr. Arun Kumar',status:'Completed'}],
+        labResults:[{test:'HbA1c',result:'7.2%',normalRange:'<5.7%',date:'10-Jan-2024',lab:'PathLab Sector 12',interpretation:'Slightly elevated – continue medication'},{test:'Blood Pressure',result:'128/82 mmHg',normalRange:'<120/80 mmHg',date:'20-Feb-2024',lab:'District Hospital',interpretation:'Borderline – monitor regularly'},{test:'Fasting Blood Glucose',result:'118 mg/dL',normalRange:'70-99 mg/dL',date:'10-Jan-2024',lab:'PathLab Sector 12',interpretation:'Slightly elevated'}],
+        visits:[{date:'20-Feb-2024',provider:'District Hospital, Dr. Sunita Rao',reason:'BP Follow-up',diagnosis:'Hypertension – Controlled',prescription:'Continue Amlodipine 5mg',notes:'BP trending better'},{date:'10-Jan-2024',provider:'Apollo Clinic, Dr. Meena Patel',reason:'Diabetes Review',diagnosis:'Type 2 Diabetes',prescription:'Continue Metformin 500mg BID',notes:'HbA1c improved from 7.8 to 7.2'},{date:'05-Nov-2023',provider:'PHC Sector 5, Dr. Arun Kumar',reason:'Fever',diagnosis:'Viral Fever',prescription:'Paracetamol 500mg TID x 5 days',notes:'Resolved in 4 days'}],
+        immunizations:[{vaccine:'COVID-19 (Covishield)',dose:'2nd Dose',date:'15-Jun-2021',center:'PHC Sector 5'},{vaccine:'Influenza',dose:'Annual',date:'01-Oct-2023',center:'Apollo Clinic'}]
+      }
+    }
+  },
+  providers: {
+    'DR-PHC-001':{ pass:'provider123', name:'Dr. Arun Kumar', facility:'PHC Sector 5', type:'PHC', specialization:'General Medicine' },
+    'DR-PRIV-001':{ pass:'provider123', name:'Dr. Meena Patel', facility:'Apollo Clinic', type:'Private Clinic', specialization:'Endocrinology' }
+  }
+};
+
+let state = {
+  patient: null,
+  provider: null,
+  consents: [],   // {id, scope, note, expiresAt, revoked, revokedAt, accessedBy:[]}
+  accessLog: [],
+  currentQRId: null,
+  cdInterval: null,
+  addedRecords: []  // records added by providers during session
+};
+
+// ══════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════
+function showScreen(id) {
+  ['roleScreen','patientLogin','patientApp','providerLogin','providerApp'].forEach(s=>document.getElementById(s).classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+}
+
+function patTab(tab) {
+  ['home','share','records','consents','ai','logs','emergency'].forEach(t=>{
+    document.getElementById(`pt-${t}-c`).classList.add('hidden');
+    const btn=document.getElementById(`pt-${t}`);
+    if(btn){btn.classList.remove('tab-active');btn.classList.add('bg-white/10','text-white');}
+  });
+  document.getElementById(`pt-${tab}-c`).classList.remove('hidden');
+  const ab=document.getElementById(`pt-${tab}`);
+  if(ab){ab.classList.add('tab-active');ab.classList.remove('bg-white/10');}
+  if(tab==='consents') renderConsents();
+  if(tab==='logs') renderLogs();
+}
+
+function recTab(r){
+  ['allergies','conditions','medications','labs','visits','vaccines'].forEach(t=>{
+    document.getElementById(`rc-${t}`).classList.toggle('hidden',t!==r);
+    const b=document.getElementById(`rt-${t}`);
+    b.className=`rt-btn text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap transition ${t===r?`${recColor(t)} text-white`:'bg-gray-200 text-gray-700 hover:bg-gray-100'}`;
+  });
+}
+function recColor(t){return{allergies:'bg-red-500',conditions:'bg-purple-500',medications:'bg-blue-500',labs:'bg-yellow-500',visits:'bg-green-500',vaccines:'bg-teal-500'}[t]||'bg-gray-500';}
+
+function provSection(s){
+  ['scan','records','denied'].forEach(x=>document.getElementById(`prov-${x}`).classList.toggle('hidden',x!==s));
+  if(s==='scan') document.getElementById('prov-token').value='';
+}
+function provRecTab(t){
+  ['meds','allergies','conditions','labs','visits'].forEach(x=>{
+    document.getElementById(`pv-${x}`).classList.toggle('hidden',x!==t);
+  });
+  document.querySelectorAll('.prov-tab').forEach((b,i)=>{
+    const tabs=['meds','allergies','conditions','labs','visits'];
+    b.className=`prov-tab text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap transition ${tabs[i]===t?'prov-tab-active':'bg-gray-200 text-gray-700 hover:bg-gray-300'}`;
+  });
+}
+
+// ══════════════════════════════════════════
+// PATIENT AUTH
+// ══════════════════════════════════════════
+function loginPatient(){
+  const id=document.getElementById('patLoginId').value.trim();
+  const pass=document.getElementById('patLoginPass').value.trim();
+  const patient=USERS.patients[id]||(Object.values(USERS.patients).find(p=>p.abhaId===id||p.phone===id));
+  if(!patient||patient.pass!==pass) return toast('❌ Invalid credentials','error');
+  state.patient=patient;
+  document.getElementById('hdr-abha').textContent=patient.abhaId;
+  renderDashboard();
+  renderAllRecords();
+  showScreen('patientApp');
+  patTab('home');
+  toast('✅ Welcome, '+patient.name+'!','success');
+}
+
+function renderDashboard(){
+  const p=state.patient;
+  document.getElementById('ph-name').textContent=p.name;
+  document.getElementById('ph-dob').textContent=`DOB: ${p.dob} · ${p.gender}`;
+  document.getElementById('ph-abha').textContent=p.abhaId;
+  document.getElementById('ph-blood').textContent=p.bloodGroup;
+  document.getElementById('ph-allergy-text').textContent=p.medicalHistory.allergies.map(a=>`${a.substance} (${a.severity})`).join(' • ');
+  const activeMeds=p.medicalHistory.medications.filter(m=>m.status==='Active').length;
+  document.getElementById('stat-meds').textContent=activeMeds;
+  document.getElementById('stat-allg').textContent=p.medicalHistory.allergies.length;
+  document.getElementById('stat-cond').textContent=p.medicalHistory.conditions.length;
+  updateConsentStat();
+}
+
+function updateConsentStat(){
+  const active=state.consents.filter(c=>!c.revoked&&new Date()<new Date(c.expiresAt)).length;
+  const el=document.getElementById('stat-cons');
+  if(el) el.textContent=active;
+}
+
+function renderAllRecords(){
+  const h=state.patient.medicalHistory;
+  // Allergies
+  document.getElementById('rc-allergies').innerHTML=h.allergies.map(a=>`
+    <div class="${a.severity==='High'?'allergy-high':'allergy-moderate'} rounded-2xl p-4 card-hover">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 ${a.severity==='High'?'bg-red-100':'bg-yellow-100'} rounded-xl flex items-center justify-center"><i class="fas fa-exclamation-triangle ${a.severity==='High'?'text-red-600':'text-yellow-600'}"></i></div>
+        <div><div class="flex items-center gap-2"><p class="font-bold text-gray-900">${a.substance}</p><span class="text-xs px-2 py-0.5 rounded-full font-medium ${a.severity==='High'?'bg-red-100 text-red-700':'bg-yellow-100 text-yellow-700'}">${a.severity}</span></div><p class="text-gray-600 text-sm">Reaction: ${a.reaction}</p><p class="text-gray-400 text-xs mt-0.5">${a.recordedAt} · ${a.recordedBy}</p></div>
+      </div>
+    </div>`).join('');
+  // Conditions
+  document.getElementById('rc-conditions').innerHTML=h.conditions.map(c=>`
+    <div class="glass rounded-2xl p-4 shadow-sm card-hover">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center"><i class="fas fa-stethoscope text-purple-600"></i></div>
+        <div><div class="flex items-center gap-2"><p class="font-bold text-gray-900">${c.name}</p><span class="text-xs px-2 py-0.5 rounded-full ${c.status==='Ongoing'?'bg-orange-100 text-orange-700':'bg-green-100 text-green-700'}">${c.status}</span></div><p class="text-gray-500 text-sm">${c.notes}</p><p class="text-gray-400 text-xs mt-0.5">Since ${c.diagnosedAt} · ${c.recordedBy}</p></div>
+      </div>
+    </div>`).join('');
+  // Medications
+  document.getElementById('rc-medications').innerHTML=h.medications.map(m=>`
+    <div class="glass rounded-2xl p-4 shadow-sm card-hover">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 ${m.status==='Active'?'bg-blue-100':'bg-gray-100'} rounded-xl flex items-center justify-center"><i class="fas fa-pills ${m.status==='Active'?'text-blue-600':'text-gray-400'}"></i></div>
+        <div><div class="flex items-center gap-2"><p class="font-bold text-gray-900">${m.name}</p><span class="text-xs px-2 py-0.5 rounded-full ${m.status==='Active'?'bg-blue-100 text-blue-700':'bg-gray-100 text-gray-500'}">${m.status}</span></div><p class="text-gray-600 text-sm">${m.dosage}</p><p class="text-gray-400 text-xs mt-0.5">By ${m.prescribedBy} · Started ${m.startDate}</p></div>
+      </div>
+    </div>`).join('');
+  // Labs
+  document.getElementById('rc-labs').innerHTML=h.labResults.map(l=>`
+    <div class="glass rounded-2xl p-4 shadow-sm card-hover">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-yellow-100 rounded-xl flex items-center justify-center"><i class="fas fa-flask text-yellow-600"></i></div>
+        <div><p class="font-bold text-gray-900">${l.test}</p><p class="text-blue-700 font-bold text-sm">${l.result} <span class="text-gray-400 font-normal text-xs">(Normal: ${l.normalRange})</span></p><p class="text-gray-600 text-xs">${l.interpretation}</p><p class="text-gray-400 text-xs mt-0.5">${l.date} · ${l.lab}</p></div>
+      </div>
+    </div>`).join('');
+  // Visits
+  document.getElementById('rc-visits').innerHTML=h.visits.map(v=>`
+    <div class="glass rounded-2xl p-4 shadow-sm card-hover border-l-4 border-green-300">
+      <p class="font-bold text-gray-900">${v.provider}</p><p class="text-gray-400 text-xs">${v.date}</p>
+      <div class="mt-2 text-sm grid grid-cols-2 gap-1"><div><span class="font-medium">Reason: </span>${v.reason}</div><div><span class="font-medium">Diagnosis: </span>${v.diagnosis}</div></div>
+      <p class="text-gray-600 text-sm mt-1"><span class="font-medium">Rx: </span>${v.prescription}</p>
+      ${v.notes?`<p class="text-gray-400 text-xs mt-0.5 italic">${v.notes}</p>`:''}
+    </div>`).join('');
+  // Vaccines
+  document.getElementById('rc-vaccines').innerHTML=h.immunizations.map(i=>`
+    <div class="glass rounded-2xl p-4 shadow-sm card-hover">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-teal-100 rounded-xl flex items-center justify-center"><i class="fas fa-syringe text-teal-600"></i></div>
+        <div><p class="font-bold text-gray-900">${i.vaccine}</p><p class="text-gray-600 text-sm">${i.dose} · ${i.date}</p><p class="text-gray-400 text-xs">${i.center}</p></div>
+      </div>
+    </div>`).join('');
+  recTab('allergies');
+}
+
+// ══════════════════════════════════════════
+// QR CONSENT GENERATION
+// ══════════════════════════════════════════
+function generateQR(){
+  const scope=document.getElementById('qr-scope').value;
+  const expMins=parseInt(document.getElementById('qr-exp').value);
+  const note=document.getElementById('qr-note').value.trim();
+  const id='TKN-'+Math.random().toString(36).substr(2,10).toUpperCase();
+  const expiresAt=new Date(Date.now()+expMins*60000).toISOString();
+
+  const consent={id, scope, note, expiresAt, revoked:false, revokedAt:null, accessedBy:[], createdAt:new Date().toISOString()};
+  state.consents.push(consent);
+  state.currentQRId=id;
+  updateConsentStat();
+
+  const qrPayload=JSON.stringify({type:'medisafe-consent',tokenId:id,patientId:'PAT-2024-001',abhaId:state.patient.abhaId,scope,expiresAt});
+
+  // Clear old QR
+  document.getElementById('qr-canvas-wrap').innerHTML='';
+  new QRCode(document.getElementById('qr-canvas-wrap'),{text:qrPayload,width:200,height:200,colorDark:'#1e40af',colorLight:'#ffffff',correctLevel:QRCode.CorrectLevel.H});
+
+  document.getElementById('qr-token-display').textContent=id;
+  document.getElementById('qr-expiry-text').textContent=`Expires: ${new Date(expiresAt).toLocaleTimeString()}`;
+  document.getElementById('qr-scope-desc').innerHTML=scopeDesc(scope);
+
+  const el=document.getElementById('qr-result');
+  el.classList.remove('hidden','opacity-50');
+  document.getElementById('qr-status-dot').className='w-3 h-3 bg-green-500 rounded-full animate-pulse';
+  document.getElementById('qr-status-text').textContent='Consent Active – Show QR to provider';
+  document.getElementById('qr-status-text').className='text-green-700 font-bold text-sm';
+  startCountdown(expiresAt);
+
+  state.accessLog.unshift({type:'CONSENT_CREATED',scope,tokenId:id,ts:new Date().toISOString()});
+  renderLogs();
+  toast('✅ QR Code generated! Show to your provider','success');
+}
+
+function scopeDesc(s){
+  return{
+    summary:'📋 <strong>Summary Access</strong>: Provider sees allergies, conditions, medications, and last visit.',
+    full:'📁 <strong>Full Access</strong>: Provider sees complete history including all visits, labs, and immunizations.',
+    emergency:'🆘 <strong>Emergency Only</strong>: Critical allergies, active medications, and conditions only.'
+  }[s]||'';
+}
+
+function startCountdown(expiresAt){
+  clearInterval(state.cdInterval);
+  const expiry=new Date(expiresAt).getTime();
+  const total=expiry-Date.now();
+  const ring=document.getElementById('cd-ring');
+  state.cdInterval=setInterval(()=>{
+    const rem=expiry-Date.now();
+    if(rem<=0){
+      clearInterval(state.cdInterval);
+      document.getElementById('cd-time').textContent='EXPIRED';
+      document.getElementById('qr-status-dot').className='w-3 h-3 bg-gray-400 rounded-full';
+      document.getElementById('qr-status-text').textContent='QR Expired – Generate a new one';
+      document.getElementById('qr-status-text').className='text-gray-500 font-bold text-sm';
+      document.getElementById('qr-result').classList.add('opacity-50');
+      return;
+    }
+    const m=Math.floor(rem/60000), s=Math.floor((rem%60000)/1000);
+    document.getElementById('cd-time').textContent=`${m}:${s.toString().padStart(2,'0')}`;
+    const pct=(rem/total)*100;
+    ring.style.strokeDashoffset=pct;
+    ring.style.stroke=pct>50?'#1e40af':pct>20?'#f59e0b':'#dc2626';
+  },1000);
+}
+
+function revokeCurrentQR(){
+  if(!state.currentQRId) return toast('No active QR to revoke','error');
+  if(!confirm('⚠️ Revoke this QR code? The provider will IMMEDIATELY lose access to your records.')) return;
+  revokeConsent(state.currentQRId);
+  clearInterval(state.cdInterval);
+  document.getElementById('qr-status-dot').className='w-3 h-3 bg-red-500 rounded-full';
+  document.getElementById('qr-status-text').textContent='❌ Consent Revoked – Access Denied';
+  document.getElementById('qr-status-text').className='text-red-700 font-bold text-sm';
+  document.getElementById('qr-result').classList.add('opacity-50','revoke-flash');
+  state.currentQRId=null;
+  toast('🚫 Consent revoked! Provider access denied immediately','success');
+}
+
+function revokeConsent(id){
+  const c=state.consents.find(x=>x.id===id);
+  if(c){c.revoked=true;c.revokedAt=new Date().toISOString();}
+  state.accessLog.unshift({type:'CONSENT_REVOKED',tokenId:id,ts:new Date().toISOString()});
+  updateConsentStat();
+  renderConsents();
+  renderLogs();
+}
+
+function revokeAll(){
+  const active=state.consents.filter(c=>!c.revoked&&new Date()<new Date(c.expiresAt));
+  if(!active.length) return toast('No active consents to revoke','error');
+  if(!confirm(`⚠️ Revoke ALL ${active.length} active consent(s)? All providers will immediately lose access.`)) return;
+  active.forEach(c=>{c.revoked=true;c.revokedAt=new Date().toISOString();});
+  clearInterval(state.cdInterval);
+  state.currentQRId=null;
+  document.getElementById('qr-result')?.classList.add('hidden');
+  state.accessLog.unshift({type:'ALL_REVOKED',count:active.length,ts:new Date().toISOString()});
+  updateConsentStat();
+  renderConsents();
+  renderLogs();
+  toast(`🚫 ${active.length} consent(s) revoked. All access denied!`,'success');
+}
+
+function copyToken(){
+  const t=document.getElementById('qr-token-display').textContent;
+  navigator.clipboard?.writeText(t)||document.execCommand('copy');
+  toast('📋 Token copied!','success');
+}
+
+// ══════════════════════════════════════════
+// CONSENTS LIST
+// ══════════════════════════════════════════
+function renderConsents(){
+  const el=document.getElementById('consents-list');
+  if(!state.consents.length){
+    el.innerHTML='<div class="text-center py-8 text-gray-400"><i class="fas fa-shield-alt text-4xl opacity-30 mb-3 block"></i><p>No consent history yet. Generate a QR code to share records.</p></div>';
+    return;
+  }
+  el.innerHTML=[...state.consents].reverse().map(c=>{
+    const active=!c.revoked&&new Date()<new Date(c.expiresAt);
+    const expired=!c.revoked&&new Date()>=new Date(c.expiresAt);
+    return `<div class="glass rounded-2xl p-4 shadow-sm ${active?'consent-active':c.revoked?'consent-revoked':'consent-expired'}">
+      <div class="flex items-start justify-between">
+        <div class="flex-1">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="font-bold text-gray-900 text-sm">${c.scope.toUpperCase()} Access</span>
+            <span class="text-xs px-2 py-0.5 rounded-full font-medium ${active?'bg-green-100 text-green-700':c.revoked?'bg-red-100 text-red-700':'bg-gray-100 text-gray-500'}">${active?'Active':c.revoked?'Revoked':'Expired'}</span>
+          </div>
+          ${c.note?`<p class="text-gray-500 text-xs italic mb-1">"${c.note}"</p>`:''}
+          <p class="text-gray-400 text-xs">Token: <code class="font-mono bg-gray-50 px-1 rounded">${c.id}</code></p>
+          <p class="text-gray-400 text-xs">Created: ${new Date(c.createdAt).toLocaleString()}</p>
+          <p class="text-gray-400 text-xs">Expires: ${new Date(c.expiresAt).toLocaleString()}</p>
+          ${c.accessedBy.length?`<p class="text-gray-500 text-xs mt-1">👁 Accessed ${c.accessedBy.length} time(s)</p>`:''}
+          ${c.revokedAt?`<p class="text-red-500 text-xs mt-1">Revoked at: ${new Date(c.revokedAt).toLocaleString()}</p>`:''}
+        </div>
+        ${active?`<button onclick="revokeConsent('${c.id}')" class="ml-3 flex-shrink-0 bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white text-xs px-3 py-2 rounded-xl font-bold transition revoke-btn">🚫 Revoke</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ══════════════════════════════════════════
+// ACCESS LOGS
+// ══════════════════════════════════════════
+function renderLogs(){
+  const el=document.getElementById('logs-list');
+  if(!state.accessLog.length){
+    el.innerHTML='<div class="text-center py-8 text-gray-400"><i class="fas fa-history text-4xl opacity-30 mb-3 block"></i><p>No events yet.</p></div>';
+    return;
+  }
+  const icons={CONSENT_CREATED:'✅',RECORD_ACCESSED:'👁',CONSENT_REVOKED:'🚫',ALL_REVOKED:'🔒',RECORD_ADDED:'📝'};
+  const labels={CONSENT_CREATED:'QR Consent generated',RECORD_ACCESSED:'Record accessed by provider',CONSENT_REVOKED:'Consent revoked by you',ALL_REVOKED:'All consents revoked',RECORD_ADDED:'Medical record added by provider'};
+  el.innerHTML=state.accessLog.map(l=>`
+    <div class="glass rounded-xl p-3 shadow-sm flex items-center gap-3">
+      <div class="text-2xl">${icons[l.type]||'📋'}</div>
+      <div class="flex-1">
+        <p class="font-medium text-gray-900 text-sm">${labels[l.type]||l.type}</p>
+        ${l.provName?`<p class="text-gray-500 text-xs">By: ${l.provName}</p>`:''}
+        ${l.count?`<p class="text-gray-500 text-xs">${l.count} consent(s) affected</p>`:''}
+        <p class="text-gray-400 text-xs">${new Date(l.ts).toLocaleString()}</p>
+      </div>
+    </div>`).join('');
+}
+
+// ══════════════════════════════════════════
+// PATIENT AI CHAT
+// ══════════════════════════════════════════
+const AI_KB = {
+  'active medications':()=>{const m=state.patient.medicalHistory.medications.filter(x=>x.status==='Active');return`You are currently taking ${m.length} active medication(s):\n${m.map(x=>`• ${x.name} – ${x.dosage} (prescribed by ${x.prescribedBy})`).join('\n')}`;},
+  'medications':()=>AI_KB['active medications'](),
+  'allergies':()=>{const a=state.patient.medicalHistory.allergies;return`You have ${a.length} known allerg${a.length===1?'y':'ies'}:\n${a.map(x=>`• ${x.substance} → ${x.reaction} (Severity: ${x.severity})`).join('\n')}`;},
+  'allerg':()=>AI_KB['allergies'](),
+  'lab':()=>{const l=state.patient.medicalHistory.labResults;return`Your recent lab results:\n${l.map(x=>`• ${x.test}: ${x.result} (Normal: ${x.normalRange}) – ${x.interpretation}`).join('\n')}`;},
+  'test result':()=>AI_KB['lab'](),
+  'conditions':()=>{const c=state.patient.medicalHistory.conditions;return`You have ${c.length} recorded condition(s):\n${c.map(x=>`• ${x.name} (${x.status}) – ${x.notes}`).join('\n')}`;},
+  'diabetes':()=>'Your latest HbA1c is 7.2% (last checked 10-Jan-2024). Target is below 5.7%. Your Metformin 500mg BID is the current treatment. Continue monitoring and follow up with Dr. Meena Patel.',
+  'blood pressure':()=>'Your last BP reading was 128/82 mmHg (20-Feb-2024), which is slightly above normal (120/80). You are on Amlodipine 5mg once daily. Dr. Sunita Rao noted it is trending better.',
+  'ibuprofen':()=>'⚠️ Caution: Ibuprofen (NSAIDs) may interact with Amlodipine (your BP medication) and can elevate blood pressure. Given your hypertension and diabetes, it is advisable to consult your doctor before taking ibuprofen. Paracetamol is generally considered safer for you.',
+  'drug interaction':()=>'Based on your current medications (Metformin + Amlodipine), avoid NSAIDs like Ibuprofen. Be cautious with Sulfa-containing drugs (you have a Sulfa allergy). Avoid Penicillin-class antibiotics (severe allergy – Anaphylaxis risk).',
+  'summary':()=>`Clinical Summary for ${state.patient.name}:\n⚠️ ALLERGIES: Penicillin (Anaphylaxis), Sulfa drugs (Rash)\n🩺 CONDITIONS: Type 2 Diabetes (ongoing), Hypertension (controlled)\n💊 ACTIVE MEDS: Metformin 500mg BID, Amlodipine 5mg OD\n🔬 RECENT LABS: HbA1c 7.2% (Jan 2024), BP 128/82 mmHg (Feb 2024)`
+};
+
+function sendAIMsg(){
+  const input=document.getElementById('ai-input');
+  const q=input.value.trim();
+  if(!q)return;
+  input.value='';
+  addChatBubble(q,'user');
+  const typId='t'+Date.now();
+  addChatBubble('Thinking...','bot',true,typId);
+  setTimeout(()=>{
+    document.getElementById(typId)?.remove();
+    const key=Object.keys(AI_KB).find(k=>q.toLowerCase().includes(k));
+    const resp=key?AI_KB[key]():`Based on your records, I found relevant information. Your known allergies include Penicillin and Sulfa drugs. You are currently taking Metformin 500mg and Amlodipine 5mg. Your HbA1c was 7.2% in Jan 2024. For specific medical advice, please consult your healthcare provider.\n\nTry asking about: "active medications", "allergies", "lab results", "diabetes", or "blood pressure".`;
+    addChatBubble(resp,'bot');
+  },800);
+}
+
+function aiAsk(q){document.getElementById('ai-input').value=q;sendAIMsg();}
+
+function addChatBubble(text,sender,typing=false,id=null){
+  const chat=document.getElementById('ai-chat');
+  const div=document.createElement('div');
+  div.className=`flex gap-2 ${sender==='user'?'flex-row-reverse':''}`;
+  if(id)div.id=id;
+  div.innerHTML=`${sender==='bot'?'<div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0"><i class="fas fa-robot text-blue-600 text-xs"></i></div>':''}
+    <div class="${sender==='bot'?'bg-white rounded-2xl rounded-tl-sm':'bg-blue-600 text-white rounded-2xl rounded-tr-sm'} p-3 shadow-sm max-w-xs">
+      <p class="${typing?'ai-typing text-gray-400':'text-sm'} whitespace-pre-wrap">${typing?'':text}</p>
+    </div>`;
+  chat.appendChild(div);
+  chat.scrollTop=chat.scrollHeight;
+}
+
+// ══════════════════════════════════════════
+// PROVIDER AUTH
+// ══════════════════════════════════════════
+const PROVIDERS_AUTH={
+  'DR-PHC-001':{pass:'provider123',name:'Dr. Arun Kumar',facility:'PHC Sector 5'},
+  'DR-PRIV-001':{pass:'provider123',name:'Dr. Meena Patel',facility:'Apollo Clinic'}
+};
+
+function loginProvider(){
+  const id=document.getElementById('prov-id').value.trim();
+  const pass=document.getElementById('prov-pass').value.trim();
+  const prov=PROVIDERS_AUTH[id];
+  if(!prov||prov.pass!==pass) return toast('❌ Invalid credentials','error');
+  state.provider={...prov,id};
+  document.getElementById('prov-name').textContent=prov.name;
+  document.getElementById('prov-fac').textContent=prov.facility;
+  showScreen('providerApp');
+  provSection('scan');
+  toast('✅ Welcome, '+prov.name,'success');
+}
+
+// ══════════════════════════════════════════
+// PROVIDER: ACCESS PATIENT
+// ══════════════════════════════════════════
+function accessPatient(){
+  const raw=document.getElementById('prov-token').value.trim();
+  if(!raw) return toast('Please paste a consent token','error');
+  const tokenId=raw.includes('tokenId')?(JSON.parse(raw).tokenId):raw;
+  const consent=state.consents.find(c=>c.id===tokenId);
+
+  if(!consent){
+    document.getElementById('denied-title').textContent='❓ Token Not Found';
+    document.getElementById('denied-msg').textContent='This consent token does not exist. Please ask the patient to generate a new QR code.';
+    provSection('denied');
+    return;
+  }
+  if(consent.revoked){
+    document.getElementById('denied-title').textContent='🚫 Consent Revoked';
+    document.getElementById('denied-msg').textContent='The patient has revoked this consent. Your access has been denied. Please ask the patient to generate a new QR code.';
+    provSection('denied');
+    toast('🚫 Access denied – patient revoked consent','error');
+    return;
+  }
+  if(new Date()>new Date(consent.expiresAt)){
+    document.getElementById('denied-title').textContent='⏱ QR Code Expired';
+    document.getElementById('denied-msg').textContent='This QR code has expired. Please ask the patient to generate a new one.';
+    provSection('denied');
+    return;
+  }
+
+  // Log access
+  consent.accessedBy.push({by:state.provider.id,name:state.provider.name,at:new Date().toISOString()});
+  state.accessLog.unshift({type:'RECORD_ACCESSED',tokenId,provName:`${state.provider.name}, ${state.provider.facility}`,scope:consent.scope,ts:new Date().toISOString()});
+  renderLogs();
+
+  // Build scoped patient data
+  const patient=USERS.patients['PAT-2024-001'];
+  const scopedData=buildScopedData(patient,consent.scope);
+  renderProviderView(scopedData, consent);
+  provSection('records');
+  toast('✅ Records loaded. Access granted by patient.','success');
+  // Auto-generate AI
+  setTimeout(genProvAI,500);
+}
+
+function buildScopedData(patient,scope){
+  const h=patient.medicalHistory;
+  const base={...patient};
+  if(scope==='emergency') return{...base,medicalHistory:{allergies:h.allergies,conditions:h.conditions,medications:h.medications.filter(m=>m.status==='Active'),labResults:[],visits:[],immunizations:[]}};
+  if(scope==='summary') return{...base,medicalHistory:{allergies:h.allergies,conditions:h.conditions,medications:h.medications,labResults:h.labResults.slice(0,2),visits:h.visits.slice(0,1),immunizations:[]}};
+  return base; // full
+}
+
+function renderProviderView(patient,consent){
+  const h=patient.medicalHistory;
+  document.getElementById('pv-name').textContent=patient.name;
+  document.getElementById('pv-dob').textContent=`DOB: ${patient.dob} · ${patient.gender}`;
+  document.getElementById('pv-abha').textContent=`ABHA: ${patient.abhaId}`;
+  document.getElementById('pv-blood').textContent=patient.bloodGroup;
+  document.getElementById('pv-exp').textContent=new Date(consent.expiresAt).toLocaleTimeString();
+  document.getElementById('prov-scope-badge').textContent=consent.scope.toUpperCase();
+
+  // Allergy alert
+  if(h.allergies.length){
+    document.getElementById('pv-allergy-alert').classList.remove('hidden');
+    document.getElementById('pv-allergy-list').innerHTML=h.allergies.map(a=>`<div class="flex items-center gap-2"><span class="font-black text-red-700">${a.substance}</span><span class="text-red-600 text-sm">→ ${a.reaction} <strong>(${a.severity})</strong></span></div>`).join('');
+  }
+  // Medications
+  document.getElementById('pv-meds').innerHTML=h.medications.map(m=>`
+    <div class="glass rounded-xl p-3 shadow-sm flex items-center gap-3 card-hover">
+      <div class="w-9 h-9 ${m.status==='Active'?'bg-blue-100':'bg-gray-100'} rounded-xl flex items-center justify-center"><i class="fas fa-pills ${m.status==='Active'?'text-blue-600':'text-gray-400'} text-sm"></i></div>
+      <div><div class="flex items-center gap-2"><p class="font-bold text-gray-900 text-sm">${m.name}</p><span class="text-xs px-1.5 py-0.5 rounded-full ${m.status==='Active'?'bg-blue-100 text-blue-700':'bg-gray-100 text-gray-500'}">${m.status}</span></div><p class="text-gray-600 text-xs">${m.dosage}</p><p class="text-gray-400 text-xs">By ${m.prescribedBy}</p></div>
+    </div>`).join('')||'<p class="text-gray-400 text-sm text-center py-4">No medications in this scope</p>';
+  // Allergies tab
+  document.getElementById('pv-allergies').innerHTML=h.allergies.map(a=>`
+    <div class="${a.severity==='High'?'allergy-high':'allergy-moderate'} rounded-xl p-3 card-hover">
+      <div class="flex items-center gap-2"><i class="fas fa-exclamation-triangle ${a.severity==='High'?'text-red-600':'text-yellow-600'}"></i><span class="font-bold text-gray-900 text-sm">${a.substance}</span><span class="text-xs px-2 py-0.5 rounded-full ${a.severity==='High'?'bg-red-100 text-red-700':'bg-yellow-100 text-yellow-700'}">${a.severity}</span></div>
+      <p class="text-gray-600 text-sm mt-1">${a.reaction}</p><p class="text-gray-400 text-xs">${a.recordedAt} · ${a.recordedBy}</p>
+    </div>`).join('')||'<p class="text-gray-400 text-sm text-center py-4">No allergies recorded</p>';
+  // Conditions
+  document.getElementById('pv-conditions').innerHTML=h.conditions.map(c=>`
+    <div class="glass rounded-xl p-3 shadow-sm card-hover">
+      <div class="flex items-center gap-2"><i class="fas fa-stethoscope text-purple-600"></i><span class="font-bold text-gray-900 text-sm">${c.name}</span><span class="text-xs px-2 py-0.5 rounded-full ${c.status==='Ongoing'?'bg-orange-100 text-orange-700':'bg-green-100 text-green-700'}">${c.status}</span></div>
+      <p class="text-gray-500 text-xs mt-1">${c.notes} · Since ${c.diagnosedAt}</p>
+    </div>`).join('')||'<p class="text-gray-400 text-sm text-center py-4">No conditions recorded</p>';
+  // Labs
+  document.getElementById('pv-labs').innerHTML=h.labResults.map(l=>`
+    <div class="glass rounded-xl p-3 shadow-sm card-hover">
+      <div class="flex justify-between items-start"><div><p class="font-bold text-gray-900 text-sm">${l.test}</p><p class="text-blue-700 font-bold">${l.result} <span class="text-gray-400 font-normal text-xs">(${l.normalRange})</span></p><p class="text-gray-500 text-xs">${l.interpretation}</p></div><div class="text-right text-xs text-gray-400"><p>${l.date}</p><p>${l.lab}</p></div></div>
+    </div>`).join('')||'<p class="text-gray-400 text-sm text-center py-4">No labs in this scope</p>';
+  // Visits
+  document.getElementById('pv-visits').innerHTML=h.visits.map(v=>`
+    <div class="glass rounded-xl p-3 shadow-sm card-hover">
+      <p class="font-bold text-gray-900 text-sm">${v.provider}</p><p class="text-gray-400 text-xs">${v.date} · ${v.reason}</p>
+      <p class="text-gray-700 text-sm mt-1"><strong>Dx:</strong> ${v.diagnosis}</p><p class="text-gray-600 text-sm"><strong>Rx:</strong> ${v.prescription}</p>
+    </div>`).join('')||'<p class="text-gray-400 text-sm text-center py-4">No visits in this scope</p>';
+  provRecTab('meds');
+}
+
+// ══════════════════════════════════════════
+// PROVIDER AI
+// ══════════════════════════════════════════
+const PROV_AI_KB={
+  'ibuprofen':()=>'⚠️ Caution: Ibuprofen (NSAID) may interfere with Amlodipine (the patient\'s antihypertensive). Can mask BP control. Given hypertension + diabetes, Paracetamol is the safer analgesic choice.',
+  'diabetes':()=>'Patient has Type 2 Diabetes since Aug 2019. Latest HbA1c: 7.2% (Jan 2024), improved from 7.8% (Jan 2023). Currently on Metformin 500mg BID. Continue current regimen; schedule next HbA1c in 3 months.',
+  'blood pressure':()=>'Latest BP: 128/82 mmHg (Feb 2024). Patient on Amlodipine 5mg OD. Dr. Sunita Rao noted BP trending better. Continue current medication; monitor at each visit.',
+  'drug interaction':()=>'⚠️ Drug interaction alerts for this patient:\n• AVOID: Penicillin-class antibiotics (Anaphylaxis risk)\n• AVOID: Sulfa drugs (Skin rash)\n• CAUTION: NSAIDs (may elevate BP, worsens kidney function in diabetes)\n• SAFE: Paracetamol, most antifungals, macrolide antibiotics',
+  'allerg':()=>'Critical Allergies:\n1. Penicillin → Anaphylaxis (HIGH RISK) – Avoid all penicillin-class antibiotics\n2. Sulfa drugs → Skin rash (MODERATE) – Avoid sulfonamides including some diuretics',
+  'summary':()=>{const p=USERS.patients['PAT-2024-001'];const h=p.medicalHistory;return`🔴 CRITICAL ALERTS: Allergic to Penicillin (Anaphylaxis) & Sulfa drugs\n\n📋 ACTIVE CONDITIONS:\n• Type 2 Diabetes – Ongoing (HbA1c 7.2% – Jan 2024)\n• Hypertension – Controlled (BP 128/82 – Feb 2024)\n\n💊 CURRENT MEDICATIONS:\n• Metformin 500mg – BID with meals\n• Amlodipine 5mg – Once daily morning\n\n🔬 RECENT TESTS: HbA1c 7.2% | FBG 118 mg/dL | BP 128/82 mmHg\n\n✅ Recommended: Continue current regimen. Review HbA1c in Apr 2024.`;},
+};
+
+function genProvAI(){
+  const box=document.getElementById('pv-ai-box');
+  box.innerHTML='<span class="ai-thinking text-gray-500 text-sm">Generating clinical summary</span>';
+  setTimeout(()=>{box.innerHTML=`<p class="text-sm text-gray-700 whitespace-pre-wrap">${PROV_AI_KB['summary']()}</p><p class="text-xs text-gray-400 mt-2">Generated: ${new Date().toLocaleTimeString()}</p>`;},700);
+}
+
+function provAsk(){
+  const q=document.getElementById('pv-ai-q').value.trim();
+  if(!q)return;
+  document.getElementById('pv-ai-q').value='';
+  const box=document.getElementById('pv-ai-box');
+  box.innerHTML=`<span class="ai-thinking text-gray-500 text-sm">Answering: "${q}"</span>`;
+  setTimeout(()=>{
+    const key=Object.keys(PROV_AI_KB).find(k=>q.toLowerCase().includes(k));
+    const resp=key?PROV_AI_KB[key]():`Based on the patient's records: Known allergies to Penicillin (anaphylaxis) and Sulfa drugs. Active medications: Metformin 500mg BID and Amlodipine 5mg OD. Conditions: Type 2 Diabetes and Hypertension. Always verify current consent before accessing records.`;
+    box.innerHTML=`<p class="text-xs text-gray-500 mb-1 font-medium">Q: ${q}</p><p class="text-sm text-gray-700 whitespace-pre-wrap">${resp}</p>`;
+  },600);
+}
+
+// ══════════════════════════════════════════
+// ADD RECORD (Provider)
+// ══════════════════════════════════════════
+function addRecord(){
+  const type=document.getElementById('rec-type').value;
+  const data=document.getElementById('rec-data').value.trim();
+  if(!data) return toast('Please enter record details','error');
+  const prov=state.provider;
+  const now=new Date();
+
+  if(type==='visit'){
+    USERS.patients['PAT-2024-001'].medicalHistory.visits.unshift({date:now.toISOString().split('T')[0],provider:`${prov.facility}, ${prov.name}`,reason:'Consultation',diagnosis:data,prescription:'Per notes',notes:''});
+  }else if(type==='medication'){
+    USERS.patients['PAT-2024-001'].medicalHistory.medications.unshift({name:data,dosage:'As prescribed',startDate:now.toISOString().split('T')[0],prescribedBy:prov.name,status:'Active'});
+  }else if(type==='lab'){
+    USERS.patients['PAT-2024-001'].medicalHistory.labResults.unshift({test:data,result:'Pending',normalRange:'See report',date:now.toISOString().split('T')[0],lab:prov.facility,interpretation:'Review with physician'});
+  }else if(type==='allergy'){
+    USERS.patients['PAT-2024-001'].medicalHistory.allergies.unshift({substance:data,severity:'Moderate',reaction:'Observed',recordedAt:now.toISOString().split('T')[0],recordedBy:`${prov.name}, ${prov.facility}`});
+  }
+
+  state.accessLog.unshift({type:'RECORD_ADDED',provName:`${prov.name}, ${prov.facility}`,ts:now.toISOString()});
+  document.getElementById('rec-data').value='';
+  renderLogs();
+  renderAllRecords();
+  toast('✅ Record added to patient file','success');
+}
+
+// ══════════════════════════════════════════
+// TOAST
+// ══════════════════════════════════════════
+let toastTimeout;
+function toast(msg,type='info'){
+  const el=document.getElementById('toast-msg');
+  el.textContent=msg;
+  el.className=`px-5 py-3 rounded-2xl shadow-2xl text-sm font-medium flex items-center gap-2 max-w-xs ${type==='error'?'bg-red-600':type==='success'?'bg-green-600':'bg-gray-900'} text-white`;
+  el.classList.remove('hidden');
+  clearTimeout(toastTimeout);
+  toastTimeout=setTimeout(()=>el.classList.add('hidden'),3500);
+}
+
+// init
+recTab('allergies');
+</script>
+</body>
+</html>

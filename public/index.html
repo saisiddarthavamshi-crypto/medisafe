@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MediSafe – Patient Health Record</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    :root { --primary: #1e40af; --secondary: #0f766e; --accent: #dc2626; }
+    body { font-family: 'Inter', -apple-system, sans-serif; background: #f0f4f8; }
+    .gradient-hero { background: linear-gradient(135deg, #1e3a8a 0%, #0f766e 50%, #065f46 100%); }
+    .glass { background: rgba(255,255,255,0.95); backdrop-filter: blur(20px); }
+    .card-hover { transition: all 0.3s cubic-bezier(0.4,0,0.2,1); }
+    .card-hover:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(0,0,0,0.12); }
+    .pulse-ring { animation: pulse-ring 2s infinite; }
+    @keyframes pulse-ring { 0%,100% { box-shadow: 0 0 0 0 rgba(220,38,38,0.4); } 50% { box-shadow: 0 0 0 12px rgba(220,38,38,0); } }
+    .tab-active { background: #1e40af; color: white; }
+    .slide-in { animation: slideIn 0.4s ease-out; }
+    @keyframes slideIn { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+    .qr-container { background: white; padding: 20px; border-radius: 16px; display: inline-block; box-shadow: 0 8px 24px rgba(0,0,0,0.12); }
+    .consent-active { border-left: 4px solid #16a34a; }
+    .consent-expired { border-left: 4px solid #9ca3af; opacity: 0.7; }
+    .consent-revoked { border-left: 4px solid #dc2626; opacity: 0.7; }
+    .ai-typing::after { content: '▌'; animation: blink 1s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+    .abha-badge { background: linear-gradient(135deg, #1e40af, #7c3aed); }
+    .allergy-high { background: #fef2f2; border: 1px solid #fca5a5; }
+    .allergy-moderate { background: #fffbeb; border: 1px solid #fcd34d; }
+    .countdown-ring { stroke-dasharray: 283; stroke-dashoffset: 283; animation: none; }
+    @keyframes countdown { from { stroke-dashoffset: 0; } }
+    .revoke-btn { transition: all 0.2s; }
+    .revoke-btn:hover { background: #dc2626 !important; color: white !important; }
+    .timeline-dot::before { content: ''; position: absolute; left: -6px; top: 50%; transform: translateY(-50%); width: 12px; height: 12px; border-radius: 50%; background: #1e40af; border: 2px solid white; box-shadow: 0 0 0 2px #1e40af; }
+  </style>
+</head>
+<body class="min-h-screen">
+
+<!-- ─────────── LOGIN SCREEN ─────────── -->
+<div id="loginScreen" class="min-h-screen gradient-hero flex items-center justify-center p-4">
+  <div class="glass rounded-3xl shadow-2xl p-8 w-full max-w-md">
+    <div class="text-center mb-8">
+      <div class="w-20 h-20 bg-blue-600 rounded-2xl mx-auto flex items-center justify-center mb-4 shadow-lg">
+        <i class="fas fa-heartbeat text-white text-3xl"></i>
+      </div>
+      <h1 class="text-3xl font-bold text-gray-900">MediSafe</h1>
+      <p class="text-gray-500 mt-1">Patient Health Record – Powered by AI</p>
+      <div class="mt-3 flex items-center justify-center gap-2">
+        <div class="abha-badge text-white text-xs px-3 py-1 rounded-full font-medium">🇮🇳 ABHA Linked</div>
+        <div class="bg-green-100 text-green-800 text-xs px-3 py-1 rounded-full font-medium">✓ Consent Driven</div>
+      </div>
+    </div>
+    <div class="space-y-4">
+      <div>
+        <label class="text-sm font-medium text-gray-700 block mb-1">Patient ID / ABHA ID / Phone</label>
+        <input id="loginId" type="text" placeholder="PAT-2024-001" value="PAT-2024-001"
+          class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-gray-900 bg-gray-50">
+      </div>
+      <div>
+        <label class="text-sm font-medium text-gray-700 block mb-1">Password</label>
+        <input id="loginPass" type="password" placeholder="••••••••" value="patient123"
+          class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none text-gray-900 bg-gray-50">
+      </div>
+      <button onclick="loginPatient()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-xl font-semibold transition-all shadow-lg hover:shadow-blue-200 hover:shadow-xl">
+        <i class="fas fa-lock-open mr-2"></i>Access My Records
+      </button>
+      <div class="text-center text-sm text-gray-400">
+        Demo: <code class="bg-gray-100 px-2 py-0.5 rounded">PAT-2024-001</code> / <code class="bg-gray-100 px-2 py-0.5 rounded">patient123</code>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────── MAIN APP ─────────── -->
+<div id="mainApp" class="hidden min-h-screen">
+
+  <!-- Header -->
+  <header class="gradient-hero text-white sticky top-0 z-40 shadow-lg">
+    <div class="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+          <i class="fas fa-heartbeat text-white"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-lg leading-none">MediSafe</h1>
+          <p class="text-blue-200 text-xs" id="headerAbha">Loading...</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <div id="emergencyBtn" onclick="showTab('emergency')"
+          class="pulse-ring bg-red-500 text-white text-xs px-3 py-1.5 rounded-full font-bold cursor-pointer hover:bg-red-600 transition">
+          🆘 Emergency
+        </div>
+        <button onclick="logout()" class="text-white/70 hover:text-white text-sm">
+          <i class="fas fa-sign-out-alt"></i>
+        </button>
+      </div>
+    </div>
+    <!-- Tab Bar -->
+    <nav class="max-w-5xl mx-auto px-4 pb-2 flex gap-1 overflow-x-auto">
+      <button onclick="showTab('home')" id="tab-home" class="tab-btn tab-active text-xs px-3 py-1.5 rounded-full whitespace-nowrap font-medium transition-all">
+        <i class="fas fa-home mr-1"></i>Dashboard
+      </button>
+      <button onclick="showTab('share')" id="tab-share" class="tab-btn bg-white/10 text-white text-xs px-3 py-1.5 rounded-full whitespace-nowrap font-medium hover:bg-white/20 transition-all">
+        <i class="fas fa-qrcode mr-1"></i>Share / QR
+      </button>
+      <button onclick="showTab('records')" id="tab-records" class="tab-btn bg-white/10 text-white text-xs px-3 py-1.5 rounded-full whitespace-nowrap font-medium hover:bg-white/20 transition-all">
+        <i class="fas fa-file-medical mr-1"></i>Records
+      </button>
+      <button onclick="showTab('consents')" id="tab-consents" class="tab-btn bg-white/10 text-white text-xs px-3 py-1.5 rounded-full whitespace-nowrap font-medium hover:bg-white/20 transition-all">
+        <i class="fas fa-shield-alt mr-1"></i>Consents
+      </button>
+      <button onclick="showTab('ai')" id="tab-ai" class="tab-btn bg-white/10 text-white text-xs px-3 py-1.5 rounded-full whitespace-nowrap font-medium hover:bg-white/20 transition-all">
+        <i class="fas fa-robot mr-1"></i>AI Assistant
+      </button>
+      <button onclick="showTab('logs')" id="tab-logs" class="tab-btn bg-white/10 text-white text-xs px-3 py-1.5 rounded-full whitespace-nowrap font-medium hover:bg-white/20 transition-all">
+        <i class="fas fa-history mr-1"></i>Access Log
+      </button>
+    </nav>
+  </header>
+
+  <main class="max-w-5xl mx-auto px-4 py-6">
+
+    <!-- ─────── TAB: HOME / DASHBOARD ─────── -->
+    <div id="tab-home-content" class="slide-in">
+      <!-- Patient Card -->
+      <div class="gradient-hero rounded-2xl p-6 text-white mb-6 shadow-xl">
+        <div class="flex items-start justify-between">
+          <div>
+            <p class="text-blue-200 text-sm">Patient Health Record</p>
+            <h2 class="text-3xl font-bold mt-1" id="patientName">Loading...</h2>
+            <p class="text-blue-200 text-sm mt-1" id="patientDob">–</p>
+          </div>
+          <div class="text-right">
+            <div class="abha-badge rounded-xl px-3 py-2 text-center">
+              <p class="text-blue-200 text-xs">ABHA ID</p>
+              <p class="font-mono font-bold text-sm" id="patientAbha">–</p>
+            </div>
+            <div class="mt-2 bg-white/20 rounded-lg px-3 py-1 text-center">
+              <p class="text-xs text-blue-100">Blood Group</p>
+              <p class="font-bold text-lg" id="patientBlood">–</p>
+            </div>
+          </div>
+        </div>
+        <div class="mt-4 flex gap-2 flex-wrap">
+          <span class="bg-white/20 text-white text-xs px-3 py-1 rounded-full" id="patientGender">–</span>
+          <span class="bg-white/20 text-white text-xs px-3 py-1 rounded-full" id="patientPhone">–</span>
+        </div>
+      </div>
+
+      <!-- Alert Banner -->
+      <div id="allergyAlert" class="bg-red-50 border border-red-200 rounded-2xl p-4 mb-4 hidden">
+        <div class="flex items-start gap-3">
+          <div class="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center flex-shrink-0">
+            <i class="fas fa-exclamation-triangle text-red-600"></i>
+          </div>
+          <div>
+            <p class="font-bold text-red-800">⚠️ Known Allergies</p>
+            <p class="text-red-700 text-sm mt-1" id="allergyAlertText">–</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Stats -->
+      <div class="grid grid-cols-2 gap-3 mb-6 sm:grid-cols-4">
+        <div class="glass rounded-2xl p-4 card-hover shadow-sm cursor-pointer" onclick="showTab('records')">
+          <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center mb-3">
+            <i class="fas fa-pills text-blue-600"></i>
+          </div>
+          <p class="text-2xl font-bold text-gray-900" id="statMeds">–</p>
+          <p class="text-gray-500 text-xs">Active Medications</p>
+        </div>
+        <div class="glass rounded-2xl p-4 card-hover shadow-sm cursor-pointer" onclick="showTab('records')">
+          <div class="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center mb-3">
+            <i class="fas fa-allergies text-red-600"></i>
+          </div>
+          <p class="text-2xl font-bold text-gray-900" id="statAllergies">–</p>
+          <p class="text-gray-500 text-xs">Allergies</p>
+        </div>
+        <div class="glass rounded-2xl p-4 card-hover shadow-sm cursor-pointer" onclick="showTab('records')">
+          <div class="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center mb-3">
+            <i class="fas fa-stethoscope text-purple-600"></i>
+          </div>
+          <p class="text-2xl font-bold text-gray-900" id="statConditions">–</p>
+          <p class="text-gray-500 text-xs">Conditions</p>
+        </div>
+        <div class="glass rounded-2xl p-4 card-hover shadow-sm cursor-pointer" onclick="showTab('consents')">
+          <div class="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center mb-3">
+            <i class="fas fa-shield-check text-green-600"></i>
+          </div>
+          <p class="text-2xl font-bold text-gray-900" id="statConsents">–</p>
+          <p class="text-gray-500 text-xs">Active Consents</p>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="glass rounded-2xl p-5 mb-6 shadow-sm">
+        <h3 class="font-bold text-gray-900 mb-4 text-lg">Quick Actions</h3>
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <button onclick="showTab('share')" class="flex flex-col items-center gap-2 p-4 bg-blue-50 rounded-xl hover:bg-blue-100 transition card-hover">
+            <div class="w-12 h-12 bg-blue-600 rounded-xl flex items-center justify-center">
+              <i class="fas fa-qrcode text-white text-xl"></i>
+            </div>
+            <span class="text-xs font-semibold text-blue-800">Share QR</span>
+          </button>
+          <button onclick="revokeAll()" class="flex flex-col items-center gap-2 p-4 bg-red-50 rounded-xl hover:bg-red-100 transition card-hover">
+            <div class="w-12 h-12 bg-red-500 rounded-xl flex items-center justify-center">
+              <i class="fas fa-ban text-white text-xl"></i>
+            </div>
+            <span class="text-xs font-semibold text-red-800">Revoke All Access</span>
+          </button>
+          <button onclick="showTab('ai')" class="flex flex-col items-center gap-2 p-4 bg-purple-50 rounded-xl hover:bg-purple-100 transition card-hover">
+            <div class="w-12 h-12 bg-purple-600 rounded-xl flex items-center justify-center">
+              <i class="fas fa-robot text-white text-xl"></i>
+            </div>
+            <span class="text-xs font-semibold text-purple-800">AI Health Chat</span>
+          </button>
+          <button onclick="showTab('logs')" class="flex flex-col items-center gap-2 p-4 bg-green-50 rounded-xl hover:bg-green-100 transition card-hover">
+            <div class="w-12 h-12 bg-green-600 rounded-xl flex items-center justify-center">
+              <i class="fas fa-eye text-white text-xl"></i>
+            </div>
+            <span class="text-xs font-semibold text-green-800">Who Accessed?</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Last Visit -->
+      <div class="glass rounded-2xl p-5 shadow-sm">
+        <h3 class="font-bold text-gray-900 mb-3 text-lg">Last Visit Summary</h3>
+        <div id="lastVisitCard" class="bg-blue-50 rounded-xl p-4">
+          <p class="text-gray-500 text-sm">Loading...</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────── TAB: SHARE / QR ─────── -->
+    <div id="tab-share-content" class="hidden slide-in">
+      <div class="glass rounded-2xl p-6 shadow-sm mb-4">
+        <h2 class="text-xl font-bold text-gray-900 mb-1">Share Health Record</h2>
+        <p class="text-gray-500 text-sm mb-6">Generate a time-limited QR code for your healthcare provider to scan</p>
+
+        <div class="grid gap-4 sm:grid-cols-3 mb-6">
+          <div>
+            <label class="text-sm font-medium text-gray-700 block mb-2">Access Scope</label>
+            <select id="consentScope" class="w-full px-3 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+              <option value="summary">📋 Summary (Recommended)</option>
+              <option value="full">📁 Full Records</option>
+              <option value="emergency">🆘 Emergency Only</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-gray-700 block mb-2">Expires In</label>
+            <select id="consentExpiry" class="w-full px-3 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+              <option value="5">5 minutes</option>
+              <option value="10" selected>10 minutes</option>
+              <option value="30">30 minutes</option>
+              <option value="60">1 hour</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-sm font-medium text-gray-700 block mb-2">Note for Provider</label>
+            <input id="consentNote" type="text" placeholder="e.g. Fever visit today" class="w-full px-3 py-2.5 border border-gray-200 rounded-xl bg-gray-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+          </div>
+        </div>
+
+        <div class="flex gap-3 flex-wrap">
+          <button onclick="generateQR()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-xl font-semibold transition shadow-lg shadow-blue-200 flex items-center justify-center gap-2">
+            <i class="fas fa-qrcode"></i> Generate QR Code
+          </button>
+          <button onclick="revokeAll()" class="bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 py-3 px-4 rounded-xl font-semibold transition flex items-center gap-2">
+            <i class="fas fa-ban"></i> Revoke All
+          </button>
+        </div>
+      </div>
+
+      <!-- QR Display -->
+      <div id="qrResult" class="hidden glass rounded-2xl p-6 shadow-sm text-center">
+        <div class="flex items-center justify-center gap-2 mb-2">
+          <div class="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse"></div>
+          <span class="text-green-700 font-semibold text-sm">Active Consent – Provider can scan now</span>
+        </div>
+        <p class="text-gray-500 text-xs mb-4" id="qrExpiry">Expires: –</p>
+        <div class="flex justify-center mb-4">
+          <div class="qr-container">
+            <img id="qrImage" src="" alt="QR Code" class="w-56 h-56 object-contain">
+          </div>
+        </div>
+        <div class="bg-blue-50 rounded-xl p-3 mb-4 text-left">
+          <p class="text-xs font-medium text-blue-800 mb-1">🔑 Consent Token (Provider enters or scans this)</p>
+          <div class="flex gap-2 items-center">
+            <code id="qrTokenBox" class="text-blue-900 text-xs break-all font-mono flex-1 bg-white rounded-lg p-2 border border-blue-200">–</code>
+            <button onclick="copyConsentToken()" class="bg-blue-600 hover:bg-blue-700 text-white text-xs px-3 py-2 rounded-lg font-semibold transition flex-shrink-0">
+              <i class="fas fa-copy mr-1"></i>Copy
+            </button>
+          </div>
+          <div class="mt-2 pt-2 border-t border-blue-100 flex items-center justify-between text-xs">
+            <span class="text-gray-500">Direct Link:</span>
+            <a id="qrAccessUrl" href="#" target="_blank" class="text-blue-600 font-medium hover:underline">Open Provider Portal →</a>
+          </div>
+        </div>
+        <div id="qrScopeInfo" class="bg-gray-50 rounded-xl p-3 mb-4 text-left text-xs text-gray-600"></div>
+        <button id="revokeQrBtn" onclick="revokeCurrentQR()" class="w-full bg-red-50 text-red-600 border-2 border-red-200 hover:bg-red-600 hover:text-white py-3 rounded-xl font-bold transition-all">
+          🚫 Revoke This QR Code Now
+        </button>
+        <!-- Countdown -->
+        <div class="mt-4 flex items-center justify-center gap-3">
+          <svg class="w-12 h-12 -rotate-90" viewBox="0 0 36 36">
+            <circle cx="18" cy="18" r="15.9" fill="none" stroke="#e5e7eb" stroke-width="3"/>
+            <circle id="countdownCircle" cx="18" cy="18" r="15.9" fill="none" stroke="#1e40af" stroke-width="3" stroke-dasharray="100" stroke-dashoffset="100" style="transition: stroke-dashoffset 1s linear;"/>
+          </svg>
+          <div class="text-left">
+            <p class="text-2xl font-bold text-gray-900" id="countdownTime">–</p>
+            <p class="text-xs text-gray-500">remaining</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────── TAB: RECORDS ─────── -->
+    <div id="tab-records-content" class="hidden slide-in space-y-4">
+      <div class="flex gap-2 overflow-x-auto pb-1">
+        <button onclick="showRecordSection('allergies')" id="rs-btn-allergies" class="rs-btn text-xs px-3 py-1.5 rounded-full bg-red-500 text-white font-medium whitespace-nowrap">🚨 Allergies</button>
+        <button onclick="showRecordSection('conditions')" id="rs-btn-conditions" class="rs-btn text-xs px-3 py-1.5 rounded-full bg-gray-200 text-gray-700 font-medium whitespace-nowrap hover:bg-purple-100">🩺 Conditions</button>
+        <button onclick="showRecordSection('medications')" id="rs-btn-medications" class="rs-btn text-xs px-3 py-1.5 rounded-full bg-gray-200 text-gray-700 font-medium whitespace-nowrap hover:bg-blue-100">💊 Medications</button>
+        <button onclick="showRecordSection('labs')" id="rs-btn-labs" class="rs-btn text-xs px-3 py-1.5 rounded-full bg-gray-200 text-gray-700 font-medium whitespace-nowrap hover:bg-yellow-100">🔬 Lab Results</button>
+        <button onclick="showRecordSection('visits')" id="rs-btn-visits" class="rs-btn text-xs px-3 py-1.5 rounded-full bg-gray-200 text-gray-700 font-medium whitespace-nowrap hover:bg-green-100">🏥 Visits</button>
+        <button onclick="showRecordSection('vaccines')" id="rs-btn-vaccines" class="rs-btn text-xs px-3 py-1.5 rounded-full bg-gray-200 text-gray-700 font-medium whitespace-nowrap hover:bg-teal-100">💉 Vaccines</button>
+      </div>
+
+      <div id="records-allergies"></div>
+      <div id="records-conditions" class="hidden"></div>
+      <div id="records-medications" class="hidden"></div>
+      <div id="records-labs" class="hidden"></div>
+      <div id="records-visits" class="hidden"></div>
+      <div id="records-vaccines" class="hidden"></div>
+    </div>
+
+    <!-- ─────── TAB: CONSENTS ─────── -->
+    <div id="tab-consents-content" class="hidden slide-in">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold text-gray-900">Consent Management</h2>
+        <button onclick="revokeAll()" class="bg-red-50 text-red-600 border border-red-200 hover:bg-red-600 hover:text-white text-sm px-4 py-2 rounded-xl font-semibold transition flex items-center gap-2">
+          <i class="fas fa-ban"></i> Revoke All
+        </button>
+      </div>
+      <div id="consentsList" class="space-y-3"></div>
+    </div>
+
+    <!-- ─────── TAB: AI ASSISTANT ─────── -->
+    <div id="tab-ai-content" class="hidden slide-in">
+      <div class="glass rounded-2xl shadow-sm overflow-hidden">
+        <div class="gradient-hero p-4 text-white">
+          <h2 class="font-bold text-lg"><i class="fas fa-robot mr-2"></i>AI Health Assistant</h2>
+          <p class="text-blue-200 text-xs mt-1">Ask about your health records, medications, or test results</p>
+        </div>
+        <div id="aiChat" class="p-4 space-y-3 min-h-64 max-h-96 overflow-y-auto bg-gray-50">
+          <div class="flex gap-2">
+            <div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+              <i class="fas fa-robot text-blue-600 text-sm"></i>
+            </div>
+            <div class="bg-white rounded-2xl rounded-tl-sm p-3 shadow-sm max-w-sm">
+              <p class="text-gray-700 text-sm">Hello! I'm your AI health assistant. I can help you understand your medical records, check for drug interactions, or summarize your health history. What would you like to know?</p>
+            </div>
+          </div>
+        </div>
+        <div class="p-4 bg-white border-t border-gray-100">
+          <div class="flex gap-2 mb-2 overflow-x-auto pb-1">
+            <button onclick="aiQuickQuery('What are my active medications?')" class="text-xs bg-blue-50 text-blue-700 px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-blue-100 transition">💊 Active meds?</button>
+            <button onclick="aiQuickQuery('What allergies do I have?')" class="text-xs bg-red-50 text-red-700 px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-red-100 transition">🚨 My allergies?</button>
+            <button onclick="aiQuickQuery('Summarize my recent test results')" class="text-xs bg-yellow-50 text-yellow-700 px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-yellow-100 transition">🔬 Test results?</button>
+            <button onclick="aiQuickQuery('What conditions am I being treated for?')" class="text-xs bg-purple-50 text-purple-700 px-3 py-1.5 rounded-full whitespace-nowrap hover:bg-purple-100 transition">🩺 My conditions?</button>
+          </div>
+          <div class="flex gap-2">
+            <input id="aiInput" type="text" placeholder="Ask me about your health records..." class="flex-1 px-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-gray-50" onkeypress="if(event.key==='Enter') sendAIQuery()">
+            <button onclick="sendAIQuery()" class="bg-blue-600 text-white px-4 py-2.5 rounded-xl hover:bg-blue-700 transition">
+              <i class="fas fa-paper-plane"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────── TAB: ACCESS LOGS ─────── -->
+    <div id="tab-logs-content" class="hidden slide-in">
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-xl font-bold text-gray-900">Access Log</h2>
+        <button onclick="loadAccessLogs()" class="text-blue-600 text-sm hover:underline"><i class="fas fa-refresh mr-1"></i>Refresh</button>
+      </div>
+      <div id="accessLogsList" class="space-y-2"></div>
+    </div>
+
+    <!-- ─────── TAB: EMERGENCY ─────── -->
+    <div id="tab-emergency-content" class="hidden slide-in">
+      <div class="bg-red-600 rounded-2xl p-5 text-white mb-4">
+        <h2 class="text-xl font-bold mb-1">🆘 Emergency Information</h2>
+        <p class="text-red-200 text-sm">Critical medical information for emergency responders</p>
+      </div>
+      <div id="emergencyData" class="space-y-4"></div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Toast -->
+<div id="toast" class="fixed bottom-6 right-4 z-50 hidden">
+  <div id="toastMsg" class="bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-xl text-sm font-medium flex items-center gap-2 max-w-xs"></div>
+</div>
+
+<script>
+const API = 'http://localhost:3001/api';
+let token = null;
+let patientData = null;
+let currentQRTokenId = null;
+let countdownInterval = null;
+
+// ─── Auth ───
+async function loginPatient() {
+  const id = document.getElementById('loginId').value.trim();
+  const pass = document.getElementById('loginPass').value.trim();
+  try {
+    const r = await fetch(`${API}/patient/login`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({patientId:id, password:pass}) });
+    const data = await r.json();
+    if (!r.ok) return showToast('❌ ' + (data.error || 'Login failed'), 'error');
+    token = data.token;
+    document.getElementById('headerAbha').textContent = data.patient.abhaId;
+    await loadPatientData();
+    document.getElementById('loginScreen').classList.add('hidden');
+    document.getElementById('mainApp').classList.remove('hidden');
+    showTab('home');
+  } catch(e) { showToast('❌ Server error. Is the server running?', 'error'); }
+}
+
+function logout() {
+  token = null; patientData = null; currentQRTokenId = null;
+  clearInterval(countdownInterval);
+  document.getElementById('mainApp').classList.add('hidden');
+  document.getElementById('loginScreen').classList.remove('hidden');
+}
+
+// ─── Load Data ───
+async function loadPatientData() {
+  const r = await fetch(`${API}/patient/profile`, { headers:{ Authorization:`Bearer ${token}` } });
+  patientData = await r.json();
+  renderDashboard();
+  renderRecords();
+}
+
+function renderDashboard() {
+  const p = patientData;
+  const h = p.medicalHistory;
+  document.getElementById('patientName').textContent = p.name;
+  document.getElementById('patientDob').textContent = `DOB: ${p.dob} | ${p.gender}`;
+  document.getElementById('patientAbha').textContent = p.abhaId;
+  document.getElementById('patientGender').textContent = p.gender;
+  document.getElementById('patientPhone').textContent = p.phone;
+  document.getElementById('patientBlood').textContent = p.bloodGroup;
+  document.getElementById('statMeds').textContent = h.medications.filter(m => m.status === 'Active').length;
+  document.getElementById('statAllergies').textContent = h.allergies.length;
+  document.getElementById('statConditions').textContent = h.conditions.length;
+  // Allergy alert
+  if (h.allergies.length > 0) {
+    document.getElementById('allergyAlert').classList.remove('hidden');
+    document.getElementById('allergyAlertText').textContent = h.allergies.map(a => `${a.substance} (${a.severity})`).join(' • ');
+  }
+  // Last visit
+  const lv = h.visits[0];
+  if (lv) {
+    document.getElementById('lastVisitCard').innerHTML = `
+      <div class="flex items-start justify-between">
+        <div>
+          <p class="font-semibold text-gray-900">${lv.provider}</p>
+          <p class="text-gray-500 text-xs mt-0.5">${lv.date}</p>
+          <p class="text-gray-700 text-sm mt-2"><span class="font-medium">Diagnosis:</span> ${lv.diagnosis}</p>
+          <p class="text-gray-700 text-sm"><span class="font-medium">Prescription:</span> ${lv.prescription}</p>
+        </div>
+      </div>
+    `;
+  }
+  // Emergency data
+  renderEmergency();
+  loadConsents();
+  loadAccessLogs();
+  loadStatConsents();
+}
+
+async function loadStatConsents() {
+  try {
+    const r = await fetch(`${API}/patient/consents`, { headers:{ Authorization:`Bearer ${token}` } });
+    const data = await r.json();
+    const active = data.consents.filter(c => c.isActive).length;
+    document.getElementById('statConsents').textContent = active;
+  } catch(e) {}
+}
+
+// ─── Records ───
+function renderRecords() {
+  const h = patientData.medicalHistory;
+  // Allergies
+  document.getElementById('records-allergies').innerHTML = h.allergies.map(a => `
+    <div class="${a.severity==='High'?'allergy-high':'allergy-moderate'} rounded-2xl p-4 card-hover">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 ${a.severity==='High'?'bg-red-100':'bg-yellow-100'} rounded-xl flex items-center justify-center">
+          <i class="fas fa-exclamation-triangle ${a.severity==='High'?'text-red-600':'text-yellow-600'}"></i>
+        </div>
+        <div class="flex-1">
+          <div class="flex items-center gap-2">
+            <p class="font-bold text-gray-900">${a.substance}</p>
+            <span class="text-xs px-2 py-0.5 rounded-full font-medium ${a.severity==='High'?'bg-red-100 text-red-700':'bg-yellow-100 text-yellow-700'}">${a.severity}</span>
+          </div>
+          <p class="text-gray-600 text-sm">Reaction: ${a.reaction}</p>
+          <p class="text-gray-400 text-xs mt-1">Recorded: ${a.recordedAt} by ${a.recordedBy}</p>
+        </div>
+      </div>
+    </div>
+  `).join('');
+  // Conditions
+  document.getElementById('records-conditions').innerHTML = h.conditions.map(c => `
+    <div class="glass rounded-2xl p-4 shadow-sm card-hover">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center">
+          <i class="fas fa-stethoscope text-purple-600"></i>
+        </div>
+        <div class="flex-1">
+          <div class="flex items-center gap-2">
+            <p class="font-bold text-gray-900">${c.name}</p>
+            <span class="text-xs px-2 py-0.5 rounded-full font-medium ${c.status==='Ongoing'?'bg-orange-100 text-orange-700':'bg-green-100 text-green-700'}">${c.status}</span>
+          </div>
+          <p class="text-gray-600 text-sm">${c.notes}</p>
+          <p class="text-gray-400 text-xs mt-1">Since ${c.diagnosedAt} • ${c.recordedBy}</p>
+        </div>
+      </div>
+    </div>
+  `).join('');
+  // Medications
+  document.getElementById('records-medications').innerHTML = h.medications.map(m => `
+    <div class="glass rounded-2xl p-4 shadow-sm card-hover">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 ${m.status==='Active'?'bg-blue-100':'bg-gray-100'} rounded-xl flex items-center justify-center">
+          <i class="fas fa-pills ${m.status==='Active'?'text-blue-600':'text-gray-400'}"></i>
+        </div>
+        <div class="flex-1">
+          <div class="flex items-center gap-2">
+            <p class="font-bold text-gray-900">${m.name}</p>
+            <span class="text-xs px-2 py-0.5 rounded-full font-medium ${m.status==='Active'?'bg-blue-100 text-blue-700':'bg-gray-100 text-gray-500'}">${m.status}</span>
+          </div>
+          <p class="text-gray-600 text-sm">${m.dosage}</p>
+          <p class="text-gray-400 text-xs mt-1">By ${m.prescribedBy} • Started ${m.startDate}</p>
+        </div>
+      </div>
+    </div>
+  `).join('');
+  // Labs
+  document.getElementById('records-labs').innerHTML = h.labResults.map(l => `
+    <div class="glass rounded-2xl p-4 shadow-sm card-hover">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-yellow-100 rounded-xl flex items-center justify-center">
+          <i class="fas fa-flask text-yellow-600"></i>
+        </div>
+        <div class="flex-1">
+          <p class="font-bold text-gray-900">${l.test}</p>
+          <p class="text-blue-700 font-semibold text-sm">${l.result} <span class="text-gray-400 font-normal text-xs">(Normal: ${l.normalRange})</span></p>
+          <p class="text-gray-600 text-xs">${l.interpretation}</p>
+          <p class="text-gray-400 text-xs mt-1">${l.date} • ${l.lab}</p>
+        </div>
+      </div>
+    </div>
+  `).join('');
+  // Visits
+  document.getElementById('records-visits').innerHTML = h.visits.map(v => `
+    <div class="glass rounded-2xl p-4 shadow-sm card-hover relative pl-6">
+      <div class="timeline-dot"></div>
+      <div class="flex items-start gap-3">
+        <div class="flex-1">
+          <p class="font-bold text-gray-900">${v.provider}</p>
+          <p class="text-gray-500 text-xs">${v.date}</p>
+          <div class="mt-2 grid grid-cols-2 gap-2 text-sm">
+            <div><span class="font-medium text-gray-700">Reason: </span>${v.reason}</div>
+            <div><span class="font-medium text-gray-700">Diagnosis: </span>${v.diagnosis}</div>
+          </div>
+          <p class="text-gray-600 text-sm mt-1"><span class="font-medium">Rx: </span>${v.prescription}</p>
+          ${v.notes?`<p class="text-gray-500 text-xs mt-1 italic">${v.notes}</p>`:''}
+        </div>
+      </div>
+    </div>
+  `).join('');
+  // Vaccines
+  document.getElementById('records-vaccines').innerHTML = h.immunizations.map(i => `
+    <div class="glass rounded-2xl p-4 shadow-sm card-hover">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-teal-100 rounded-xl flex items-center justify-center">
+          <i class="fas fa-syringe text-teal-600"></i>
+        </div>
+        <div>
+          <p class="font-bold text-gray-900">${i.vaccine}</p>
+          <p class="text-gray-600 text-sm">${i.dose} • ${i.date}</p>
+          <p class="text-gray-400 text-xs">${i.center}</p>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function showRecordSection(section) {
+  ['allergies','conditions','medications','labs','visits','vaccines'].forEach(s => {
+    document.getElementById(`records-${s}`).classList.toggle('hidden', s !== section);
+    const btn = document.getElementById(`rs-btn-${s}`);
+    btn.className = `rs-btn text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap transition ` +
+      (s === section ? `${getSectionColor(s)} text-white` : 'bg-gray-200 text-gray-700 hover:bg-gray-300');
+  });
+}
+
+function getSectionColor(s) {
+  return {allergies:'bg-red-500',conditions:'bg-purple-500',medications:'bg-blue-500',labs:'bg-yellow-500',visits:'bg-green-500',vaccines:'bg-teal-500'}[s]||'bg-gray-500';
+}
+
+// ─── QR Generation ───
+async function generateQR() {
+  const scope = document.getElementById('consentScope').value;
+  const exp = parseInt(document.getElementById('consentExpiry').value);
+  const note = document.getElementById('consentNote').value;
+  try {
+    showToast('⏳ Generating QR Code...', 'info');
+    const r = await fetch(`${API}/patient/generate-consent`, { method:'POST', headers:{'Content-Type':'application/json', Authorization:`Bearer ${token}`}, body:JSON.stringify({ expiresInMinutes:exp, scope, note }) });
+    const data = await r.json();
+    if (!r.ok) return showToast('❌ Failed to generate QR', 'error');
+    currentQRTokenId = data.tokenId;
+    document.getElementById('qrTokenBox').textContent = data.tokenId;
+    document.getElementById('qrImage').src = data.qrDataUrl;
+    document.getElementById('qrExpiry').textContent = `Expires: ${new Date(data.expiresAt).toLocaleTimeString()}`;
+    const url = data.accessUrl;
+    document.getElementById('qrAccessUrl').href = url;
+    document.getElementById('qrScopeInfo').innerHTML = getScopeDescription(scope);
+    document.getElementById('qrResult').classList.remove('hidden');
+    startCountdown(data.expiresAt);
+    loadStatConsents();
+    showToast('✅ QR Code generated! Show to your provider', 'success');
+  } catch(e) { showToast('❌ Server error', 'error'); }
+}
+
+function copyConsentToken() {
+  const t = document.getElementById('qrTokenBox').textContent;
+  if (!t || t === '–') return;
+  navigator.clipboard?.writeText(t) || document.execCommand('copy');
+  showToast('📋 Token copied to clipboard!', 'success');
+}
+
+function getScopeDescription(scope) {
+  const descriptions = {
+    summary: '📋 <strong>Summary Access</strong>: Provider can see allergies, conditions, medications, and last visit.',
+    full: '📁 <strong>Full Access</strong>: Provider can see complete medical history including all visits, lab results, and immunizations.',
+    emergency: '🆘 <strong>Emergency Access</strong>: Active medications, critical allergies, and conditions only.'
+  };
+  return descriptions[scope] || '';
+}
+
+function startCountdown(expiresAt) {
+  clearInterval(countdownInterval);
+  const expiry = new Date(expiresAt).getTime();
+  const total = expiry - Date.now();
+  const circle = document.getElementById('countdownCircle');
+  countdownInterval = setInterval(() => {
+    const remaining = expiry - Date.now();
+    if (remaining <= 0) {
+      clearInterval(countdownInterval);
+      document.getElementById('countdownTime').textContent = 'EXPIRED';
+      document.getElementById('qrResult').classList.add('opacity-50');
+      return;
+    }
+    const mins = Math.floor(remaining / 60000);
+    const secs = Math.floor((remaining % 60000) / 1000);
+    document.getElementById('countdownTime').textContent = `${mins}:${secs.toString().padStart(2,'0')}`;
+    const pct = (remaining / total) * 100;
+    circle.style.strokeDashoffset = 100 - pct;
+    circle.style.stroke = pct > 50 ? '#1e40af' : pct > 20 ? '#f59e0b' : '#dc2626';
+  }, 1000);
+}
+
+async function revokeCurrentQR() {
+  if (!currentQRTokenId) return showToast('No active QR to revoke', 'error');
+  if (!confirm('Revoke this QR code? The provider will immediately lose access.')) return;
+  await revokeConsent(currentQRTokenId);
+  document.getElementById('qrResult').classList.add('hidden');
+  clearInterval(countdownInterval);
+  currentQRTokenId = null;
+  showToast('🚫 QR Code revoked! Access denied immediately', 'success');
+}
+
+async function revokeConsent(tokenId) {
+  const r = await fetch(`${API}/patient/revoke-consent`, { method:'POST', headers:{'Content-Type':'application/json', Authorization:`Bearer ${token}`}, body:JSON.stringify({tokenId}) });
+  await r.json();
+  loadConsents();
+  loadStatConsents();
+}
+
+async function revokeAll() {
+  if (!confirm('Revoke ALL active consents? All providers will immediately lose access.')) return;
+  try {
+    const r = await fetch(`${API}/patient/revoke-all`, { method:'POST', headers:{ Authorization:`Bearer ${token}` } });
+    const data = await r.json();
+    clearInterval(countdownInterval);
+    currentQRTokenId = null;
+    document.getElementById('qrResult').classList.add('hidden');
+    loadConsents();
+    loadStatConsents();
+    showToast(`🚫 ${data.message}`, 'success');
+  } catch(e) { showToast('❌ Error revoking consents', 'error'); }
+}
+
+// ─── Consents List ───
+async function loadConsents() {
+  try {
+    const r = await fetch(`${API}/patient/consents`, { headers:{ Authorization:`Bearer ${token}` } });
+    const data = await r.json();
+    const container = document.getElementById('consentsList');
+    if (!data.consents.length) {
+      container.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fas fa-shield-alt text-4xl mb-3 block opacity-30"></i><p>No consent history yet</p></div>';
+      return;
+    }
+    container.innerHTML = data.consents.map(c => `
+      <div class="glass rounded-2xl p-4 shadow-sm ${c.isActive?'consent-active':c.revoked?'consent-revoked':'consent-expired'}">
+        <div class="flex items-start justify-between">
+          <div class="flex-1">
+            <div class="flex items-center gap-2 mb-1">
+              <span class="font-semibold text-gray-900 text-sm">${c.scope.toUpperCase()} Access</span>
+              <span class="text-xs px-2 py-0.5 rounded-full font-medium ${c.isActive?'bg-green-100 text-green-700':c.revoked?'bg-red-100 text-red-700':'bg-gray-100 text-gray-500'}">
+                ${c.isActive?'Active':c.revoked?'Revoked':'Expired'}
+              </span>
+            </div>
+            ${c.note?`<p class="text-gray-600 text-xs mb-1">"${c.note}"</p>`:''}
+            <p class="text-gray-400 text-xs">Created: ${new Date(c.createdAt).toLocaleString()}</p>
+            <p class="text-gray-400 text-xs">Expires: ${new Date(c.expiresAt).toLocaleString()}</p>
+            ${c.accessCount?`<p class="text-gray-500 text-xs mt-1">👁 Accessed ${c.accessCount} time(s)</p>`:''}
+            ${c.revokedAt?`<p class="text-red-500 text-xs mt-1">Revoked at: ${new Date(c.revokedAt).toLocaleString()}</p>`:''}
+          </div>
+          ${c.isActive?`<button onclick="revokeConsent('${c.tokenId}')" class="ml-2 revoke-btn bg-red-50 text-red-600 border border-red-200 text-xs px-3 py-1.5 rounded-lg font-medium flex-shrink-0">🚫 Revoke</button>`:''}
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {}
+}
+
+// ─── Access Logs ───
+async function loadAccessLogs() {
+  try {
+    const r = await fetch(`${API}/patient/access-logs`, { headers:{ Authorization:`Bearer ${token}` } });
+    const data = await r.json();
+    const icons = { RECORD_ACCESSED:'👁', CONSENT_REVOKED:'🚫', ALL_CONSENTS_REVOKED:'🔒', RECORD_ADDED:'📝' };
+    const container = document.getElementById('accessLogsList');
+    if (!data.logs.length) {
+      container.innerHTML = '<div class="text-center py-8 text-gray-400"><i class="fas fa-history text-4xl mb-3 block opacity-30"></i><p>No access events yet</p></div>';
+      return;
+    }
+    container.innerHTML = data.logs.map(l => `
+      <div class="glass rounded-xl p-3 shadow-sm flex items-center gap-3">
+        <div class="text-2xl">${icons[l.type]||'📋'}</div>
+        <div class="flex-1">
+          <p class="font-medium text-gray-900 text-sm">${formatLogType(l.type)}</p>
+          ${l.accessorId?`<p class="text-gray-500 text-xs">By: ${l.accessorId}</p>`:''}
+          <p class="text-gray-400 text-xs">${new Date(l.timestamp).toLocaleString()}</p>
+        </div>
+      </div>
+    `).join('');
+  } catch(e) {}
+}
+
+function formatLogType(t) {
+  return { RECORD_ACCESSED:'Health record was accessed by a provider', CONSENT_REVOKED:'Consent revoked by patient', ALL_CONSENTS_REVOKED:'All consents revoked', RECORD_ADDED:'Medical record added by provider' }[t] || t;
+}
+
+// ─── Emergency ───
+function renderEmergency() {
+  if (!patientData) return;
+  const p = patientData; const h = p.medicalHistory;
+  document.getElementById('emergencyData').innerHTML = `
+    <div class="allergy-high rounded-2xl p-4">
+      <h3 class="font-bold text-red-800 mb-2">🚨 ALLERGIES – CRITICAL</h3>
+      ${h.allergies.map(a => `<div class="flex gap-2 mb-2"><span class="font-bold text-red-700">${a.substance}</span><span class="text-red-600">→ ${a.reaction} (${a.severity})</span></div>`).join('')}
+    </div>
+    <div class="glass rounded-2xl p-4 shadow-sm">
+      <h3 class="font-bold text-gray-900 mb-2">💊 Active Medications</h3>
+      ${h.medications.filter(m=>m.status==='Active').map(m => `<div class="flex gap-2 mb-1 text-sm"><span class="font-medium">${m.name}</span><span class="text-gray-500">– ${m.dosage}</span></div>`).join('')}
+    </div>
+    <div class="glass rounded-2xl p-4 shadow-sm">
+      <h3 class="font-bold text-gray-900 mb-2">🩺 Conditions</h3>
+      ${h.conditions.map(c => `<p class="text-sm mb-1"><span class="font-medium">${c.name}</span> (${c.status})</p>`).join('')}
+    </div>
+    <div class="glass rounded-2xl p-4 shadow-sm">
+      <h3 class="font-bold text-gray-900 mb-2">🆘 Emergency Contact</h3>
+      <p class="font-semibold">${p.emergencyContact.name}</p>
+      <p class="text-gray-600 text-sm">${p.emergencyContact.relation} • ${p.emergencyContact.phone}</p>
+    </div>
+  `;
+}
+
+// ─── AI Chat ───
+async function sendAIQuery() {
+  const input = document.getElementById('aiInput');
+  const query = input.value.trim();
+  if (!query) return;
+  input.value = '';
+  addChatMessage(query, 'user');
+  const typingId = addChatMessage('Thinking...', 'bot', true);
+  try {
+    const r = await fetch(`${API}/ai/patient-chat`, { method:'POST', headers:{'Content-Type':'application/json', Authorization:`Bearer ${token}`}, body:JSON.stringify({query}) });
+    const data = await r.json();
+    document.getElementById(typingId)?.remove();
+    addChatMessage(data.response, 'bot');
+  } catch(e) {
+    document.getElementById(typingId)?.remove();
+    addChatMessage('Sorry, I could not process your query right now.', 'bot');
+  }
+}
+
+function aiQuickQuery(q) { document.getElementById('aiInput').value = q; sendAIQuery(); }
+
+function addChatMessage(text, sender, typing=false) {
+  const id = 'msg-' + Date.now();
+  const chat = document.getElementById('aiChat');
+  const isBot = sender === 'bot';
+  chat.innerHTML += `
+    <div id="${id}" class="flex gap-2 ${isBot?'':'flex-row-reverse'}">
+      ${isBot?'<div class="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0"><i class="fas fa-robot text-blue-600 text-sm"></i></div>':''}
+      <div class="${isBot?'bg-white rounded-2xl rounded-tl-sm':'bg-blue-600 text-white rounded-2xl rounded-tr-sm'} p-3 shadow-sm max-w-xs">
+        <p class="text-sm ${typing?'ai-typing':''} whitespace-pre-wrap">${typing?'':text}</p>
+      </div>
+    </div>
+  `;
+  chat.scrollTop = chat.scrollHeight;
+  return id;
+}
+
+// ─── Tabs ───
+function showTab(tab) {
+  ['home','share','records','consents','ai','logs','emergency'].forEach(t => {
+    document.getElementById(`tab-${t}-content`).classList.add('hidden');
+    const btn = document.getElementById(`tab-${t}`);
+    if (btn) { btn.className = btn.className.replace('tab-active', '').replace('bg-white/10',''); btn.classList.add('bg-white/10'); }
+  });
+  document.getElementById(`tab-${tab}-content`).classList.remove('hidden');
+  const activeBtn = document.getElementById(`tab-${tab}`);
+  if (activeBtn) { activeBtn.classList.remove('bg-white/10'); activeBtn.classList.add('tab-active'); }
+  if (tab === 'consents') loadConsents();
+  if (tab === 'logs') loadAccessLogs();
+}
+
+// ─── Toast ───
+function showToast(msg, type='info') {
+  const toast = document.getElementById('toast');
+  const toastMsg = document.getElementById('toastMsg');
+  toastMsg.textContent = msg;
+  toastMsg.className = `px-5 py-3 rounded-2xl shadow-xl text-sm font-medium flex items-center gap-2 max-w-xs ${type==='error'?'bg-red-600':type==='success'?'bg-green-600':'bg-gray-900'} text-white`;
+  toast.classList.remove('hidden');
+  setTimeout(() => toast.classList.add('hidden'), 3500);
+}
+
+// Init record sections
+showRecordSection('allergies');
+</script>
+</body>
+</html>

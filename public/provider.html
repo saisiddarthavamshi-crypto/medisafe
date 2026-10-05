@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MediSafe – Provider Access</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <style>
+    body { font-family: 'Inter', -apple-system, sans-serif; background: #f0f9f0; }
+    .gradient-provider { background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #0f766e 100%); }
+    .glass { background: rgba(255,255,255,0.97); backdrop-filter: blur(20px); }
+    .card-hover { transition: all 0.3s ease; }
+    .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,0,0,0.08); }
+    .slide-in { animation: slideIn 0.4s ease-out; }
+    @keyframes slideIn { from { opacity:0; transform:translateY(20px); } to { opacity:1; transform:translateY(0); } }
+    .allergy-critical { background: #fef2f2; border-left: 4px solid #dc2626; }
+    .allergy-moderate { background: #fffbeb; border-left: 4px solid #f59e0b; }
+    .scan-animation { animation: scan 2s infinite; }
+    @keyframes scan { 0%,100%{transform:translateY(0);opacity:0.5} 50%{transform:translateY(100%);opacity:1} }
+    .ai-thinking::after { content:'▌'; animation: blink 1s infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+    .qr-scanner-box { border: 3px solid #059669; border-radius: 12px; position: relative; }
+    .qr-scanner-box::before { content:''; position:absolute; top:0; left:0; right:0; height:3px; background: #059669; animation: scan 2s linear infinite; }
+    .badge-active { background: #d1fae5; color: #065f46; }
+    .badge-revoked { background: #fee2e2; color: #991b1b; }
+    .section-tab { transition: all 0.2s; }
+    .section-tab.active { background: #059669; color: white; }
+    .print-btn { background: linear-gradient(135deg, #1e40af, #7c3aed); }
+  </style>
+</head>
+<body class="min-h-screen">
+
+<!-- ─────────── PROVIDER LOGIN ─────────── -->
+<div id="providerLogin" class="min-h-screen gradient-provider flex items-center justify-center p-4">
+  <div class="glass rounded-3xl shadow-2xl p-8 w-full max-w-md">
+    <div class="text-center mb-6">
+      <div class="w-20 h-20 bg-emerald-600 rounded-2xl mx-auto flex items-center justify-center mb-4 shadow-lg">
+        <i class="fas fa-user-md text-white text-3xl"></i>
+      </div>
+      <h1 class="text-2xl font-bold text-gray-900">Provider Portal</h1>
+      <p class="text-gray-500 text-sm mt-1">MediSafe – Scan Patient QR or Enter Token</p>
+      <div class="mt-2 bg-emerald-50 border border-emerald-200 rounded-xl p-2 text-xs text-emerald-800">
+        ⚡ Works on any device — no laptop needed
+      </div>
+    </div>
+    <div class="space-y-4">
+      <div>
+        <label class="text-sm font-medium text-gray-700 block mb-1">Provider ID</label>
+        <input id="provId" type="text" placeholder="DR-PHC-001" value="DR-PHC-001"
+          class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-gray-50">
+      </div>
+      <div>
+        <label class="text-sm font-medium text-gray-700 block mb-1">Password</label>
+        <input id="provPass" type="password" placeholder="••••••••" value="provider123"
+          class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-gray-50">
+      </div>
+      <button onclick="loginProvider()" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-xl font-semibold transition shadow-lg">
+        <i class="fas fa-sign-in-alt mr-2"></i>Login as Provider
+      </button>
+      <div class="relative">
+        <div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-200"></div></div>
+        <div class="relative flex justify-center text-xs text-gray-400 bg-white px-2">OR scan QR directly</div>
+      </div>
+      <div>
+        <label class="text-sm font-medium text-gray-700 block mb-1">Paste Consent Token / URL</label>
+        <div class="flex gap-2">
+          <input id="directToken" type="text" placeholder="Paste token or URL from patient QR"
+            class="flex-1 px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-gray-50">
+          <button onclick="accessDirectToken()" class="bg-gray-800 text-white px-4 rounded-xl hover:bg-gray-700 transition text-sm">
+            <i class="fas fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+      <div class="text-center text-xs text-gray-400 space-y-0.5">
+        <p>PHC: <code class="bg-gray-100 px-1 rounded">DR-PHC-001</code> / <code class="bg-gray-100 px-1 rounded">provider123</code></p>
+        <p>Clinic: <code class="bg-gray-100 px-1 rounded">DR-PRIV-001</code> / <code class="bg-gray-100 px-1 rounded">provider123</code></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ─────────── PROVIDER MAIN APP ─────────── -->
+<div id="providerApp" class="hidden min-h-screen">
+
+  <!-- Header -->
+  <header class="gradient-provider text-white sticky top-0 z-40 shadow-lg">
+    <div class="max-w-4xl mx-auto px-4 py-3 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+          <i class="fas fa-user-md text-white"></i>
+        </div>
+        <div>
+          <h1 class="font-bold" id="providerName">Provider</h1>
+          <p class="text-emerald-200 text-xs" id="providerFacility">–</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <button onclick="showProvSection('scan')" class="bg-white/20 text-white text-sm px-4 py-1.5 rounded-full font-medium hover:bg-white/30 transition">
+          <i class="fas fa-qrcode mr-1"></i>New Patient
+        </button>
+        <button onclick="logoutProvider()" class="text-white/70 hover:text-white text-sm">
+          <i class="fas fa-sign-out-alt"></i>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-4xl mx-auto px-4 py-6">
+
+    <!-- ─────── SCAN / TOKEN ENTRY SECTION ─────── -->
+    <div id="prov-scan" class="slide-in">
+      <div class="glass rounded-2xl shadow-sm p-6 mb-4">
+        <h2 class="text-xl font-bold text-gray-900 mb-1">Access Patient Records</h2>
+        <p class="text-gray-500 text-sm mb-5">Ask patient to show QR code, then paste the token below</p>
+
+        <div class="bg-emerald-50 border-2 border-emerald-300 rounded-2xl p-8 text-center mb-5 relative overflow-hidden">
+          <div class="absolute top-0 left-0 w-full h-1 bg-emerald-400 scan-animation opacity-60"></div>
+          <i class="fas fa-qrcode text-emerald-600 text-6xl mb-3 opacity-60"></i>
+          <p class="text-emerald-800 font-semibold">Patient shows QR code</p>
+          <p class="text-emerald-600 text-sm mt-1">Scan with device camera or paste token below</p>
+        </div>
+
+        <div class="space-y-3">
+          <div>
+            <label class="text-sm font-medium text-gray-700 block mb-1">Consent Token / URL from Patient QR</label>
+            <div class="flex gap-2">
+              <input id="tokenInput" type="text" placeholder="Paste token ID or full URL here..."
+                class="flex-1 px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 outline-none bg-gray-50 font-mono text-sm">
+              <button onclick="accessPatient()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-6 rounded-xl font-semibold transition shadow-md">
+                Access
+              </button>
+            </div>
+          </div>
+          <div class="bg-blue-50 rounded-xl p-3 text-xs text-blue-700">
+            <i class="fas fa-info-circle mr-1"></i>
+            The patient's QR contains a consent token that grants you temporary access to their records. Access expires automatically.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ─────── PATIENT RECORDS VIEW ─────── -->
+    <div id="prov-records" class="hidden slide-in">
+
+      <!-- Patient Header Card -->
+      <div class="gradient-provider rounded-2xl p-5 text-white mb-4 shadow-xl">
+        <div class="flex items-start justify-between">
+          <div>
+            <div class="flex items-center gap-2 mb-1">
+              <div class="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
+              <span class="text-emerald-200 text-xs">Consent Active</span>
+              <span id="patientScopeBadge" class="bg-white/20 text-white text-xs px-2 py-0.5 rounded-full"></span>
+            </div>
+            <h2 class="text-2xl font-bold" id="prov-patientName">–</h2>
+            <p class="text-emerald-200 text-sm" id="prov-patientDob">–</p>
+            <p class="text-emerald-200 text-sm font-mono mt-1" id="prov-patientAbha">–</p>
+          </div>
+          <div class="text-right">
+            <div class="bg-white/20 rounded-xl px-3 py-2 text-center">
+              <p class="text-emerald-200 text-xs">Blood Group</p>
+              <p class="font-bold text-2xl" id="prov-bloodGroup">–</p>
+            </div>
+            <div class="mt-2 bg-white/10 rounded-lg px-3 py-1.5 text-xs">
+              <p class="text-emerald-200">Expires</p>
+              <p class="font-mono" id="prov-expiresAt">–</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CRITICAL ALLERGY ALERT -->
+      <div id="prov-allergyAlert" class="allergy-critical rounded-2xl p-4 mb-4 hidden">
+        <div class="flex items-start gap-3">
+          <div class="text-3xl">⚠️</div>
+          <div>
+            <p class="font-bold text-red-800 text-lg">ALLERGY ALERT</p>
+            <div id="prov-allergyList" class="mt-1 space-y-1"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- AI Summary Box -->
+      <div class="glass rounded-2xl p-4 mb-4 shadow-sm">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-bold text-gray-900 flex items-center gap-2">
+            <span class="w-7 h-7 bg-purple-100 rounded-lg flex items-center justify-center"><i class="fas fa-robot text-purple-600 text-xs"></i></span>
+            AI Clinical Summary
+          </h3>
+          <button onclick="getAISummary()" class="text-xs bg-purple-50 text-purple-700 border border-purple-200 px-3 py-1.5 rounded-lg hover:bg-purple-100 transition">
+            <i class="fas fa-sync mr-1"></i>Refresh
+          </button>
+        </div>
+        <div id="aiSummaryBox" class="bg-gray-50 rounded-xl p-3 text-sm text-gray-700 min-h-12">
+          <span class="text-gray-400">Click refresh to generate AI clinical summary...</span>
+        </div>
+        <!-- AI Ask -->
+        <div class="mt-3 flex gap-2">
+          <input id="provAiInput" type="text" placeholder="Ask AI about this patient..." class="flex-1 px-3 py-2 border border-gray-200 rounded-xl text-sm focus:ring-2 focus:ring-purple-500 outline-none bg-gray-50" onkeypress="if(event.key==='Enter') askProviderAI()">
+          <button onclick="askProviderAI()" class="bg-purple-600 text-white px-4 py-2 rounded-xl hover:bg-purple-700 transition text-sm">Ask</button>
+        </div>
+      </div>
+
+      <!-- Record Sections -->
+      <div class="flex gap-2 overflow-x-auto pb-2 mb-4">
+        <button onclick="showProvRecordTab('active-meds')" class="section-tab active text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap">💊 Medications</button>
+        <button onclick="showProvRecordTab('allergies')" class="section-tab bg-gray-200 text-gray-700 text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap">🚨 Allergies</button>
+        <button onclick="showProvRecordTab('conditions')" class="section-tab bg-gray-200 text-gray-700 text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap">🩺 Conditions</button>
+        <button onclick="showProvRecordTab('labs')" class="section-tab bg-gray-200 text-gray-700 text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap">🔬 Lab Results</button>
+        <button onclick="showProvRecordTab('visits')" class="section-tab bg-gray-200 text-gray-700 text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap">📅 Past Visits</button>
+      </div>
+
+      <div id="prov-active-meds" class="space-y-2"></div>
+      <div id="prov-allergies" class="space-y-2 hidden"></div>
+      <div id="prov-conditions" class="space-y-2 hidden"></div>
+      <div id="prov-labs" class="space-y-2 hidden"></div>
+      <div id="prov-visits" class="space-y-2 hidden"></div>
+
+      <!-- Add Record Section -->
+      <div class="glass rounded-2xl p-5 mt-4 shadow-sm">
+        <h3 class="font-bold text-gray-900 mb-4 flex items-center gap-2">
+          <span class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center"><i class="fas fa-plus text-blue-600 text-sm"></i></span>
+          Add to Patient Record
+        </h3>
+        <div class="grid gap-3">
+          <select id="addRecordType" class="px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none">
+            <option value="visit">📅 New Visit / Consultation</option>
+            <option value="medication">💊 New Prescription</option>
+            <option value="lab">🔬 Lab Result</option>
+            <option value="allergy">🚨 New Allergy</option>
+          </select>
+          <textarea id="addRecordData" placeholder="Describe the record (e.g., Diagnosis: Viral fever, Prescription: Paracetamol 500mg TID x 5 days, Notes: Patient advised rest)" class="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm bg-gray-50 h-20 resize-none focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
+          <button onclick="addProviderRecord()" class="bg-blue-600 text-white py-2.5 rounded-xl font-semibold hover:bg-blue-700 transition text-sm">
+            <i class="fas fa-save mr-2"></i>Save to Patient Record
+          </button>
+        </div>
+      </div>
+
+      <!-- Back / Print -->
+      <div class="flex gap-3 mt-4">
+        <button onclick="showProvSection('scan')" class="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-semibold hover:bg-gray-200 transition text-sm">
+          <i class="fas fa-arrow-left mr-2"></i>New Patient
+        </button>
+        <button onclick="window.print()" class="print-btn text-white py-3 px-6 rounded-xl font-semibold transition text-sm shadow-lg">
+          <i class="fas fa-print mr-2"></i>Print Summary
+        </button>
+      </div>
+    </div>
+
+    <!-- ─────── REVOKED / EXPIRED MESSAGE ─────── -->
+    <div id="prov-revoked" class="hidden slide-in">
+      <div class="glass rounded-2xl p-8 text-center shadow-sm">
+        <div class="w-20 h-20 bg-red-100 rounded-full mx-auto flex items-center justify-center mb-4">
+          <i class="fas fa-ban text-red-600 text-3xl"></i>
+        </div>
+        <h2 class="text-2xl font-bold text-red-700 mb-2" id="revokedTitle">Access Denied</h2>
+        <p class="text-gray-600" id="revokedMessage">The patient has revoked access to this record.</p>
+        <div class="mt-4 bg-red-50 border border-red-200 rounded-xl p-3 text-sm text-red-700">
+          <i class="fas fa-info-circle mr-1"></i>Please ask the patient to generate a new QR code to grant access.
+        </div>
+        <button onclick="showProvSection('scan')" class="mt-5 bg-gray-800 text-white px-6 py-3 rounded-xl hover:bg-gray-700 transition font-medium">
+          <i class="fas fa-qrcode mr-2"></i>Scan Another Patient
+        </button>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- Toast -->
+<div id="provToast" class="fixed bottom-6 right-4 z-50 hidden">
+  <div id="provToastMsg" class="bg-gray-900 text-white px-5 py-3 rounded-2xl shadow-xl text-sm font-medium"></div>
+</div>
+
+<script>
+const API = 'http://localhost:3001/api';
+let provToken = null;
+let providerData = null;
+let currentTokenId = null;
+let patientRecord = null;
+
+// Check URL for direct token access
+const urlParams = new URLSearchParams(window.location.search);
+const urlToken = urlParams.get('token');
+if (urlToken) {
+  document.getElementById('directToken').value = urlToken;
+  document.getElementById('tokenInput').value = urlToken;
+}
+
+// ─── Auth ───
+async function loginProvider() {
+  const id = document.getElementById('provId').value.trim();
+  const pass = document.getElementById('provPass').value.trim();
+  try {
+    const r = await fetch(`${API}/provider/login`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({providerId:id, password:pass}) });
+    const data = await r.json();
+    if (!r.ok) return provShowToast('❌ ' + (data.error || 'Invalid credentials'), 'error');
+    provToken = data.token;
+    providerData = data.provider;
+    document.getElementById('providerName').textContent = data.provider.name;
+    document.getElementById('providerFacility').textContent = data.provider.facility;
+    document.getElementById('providerLogin').classList.add('hidden');
+    document.getElementById('providerApp').classList.remove('hidden');
+    if (urlToken) { document.getElementById('tokenInput').value = urlToken; await accessPatient(); }
+  } catch(e) { provShowToast('❌ Server error. Is the server running?', 'error'); }
+}
+
+function logoutProvider() {
+  provToken = null; providerData = null; currentTokenId = null; patientRecord = null;
+  document.getElementById('providerApp').classList.add('hidden');
+  document.getElementById('providerLogin').classList.remove('hidden');
+}
+
+async function accessDirectToken() {
+  const val = document.getElementById('directToken').value.trim();
+  if (!val) return;
+  document.getElementById('tokenInput').value = extractToken(val);
+  await loginProvider();
+}
+
+function extractToken(input) {
+  if (!input) return '';
+  input = input.trim();
+  // If it's a JSON string from the QR code scanner
+  if (input.startsWith('{') && input.endsWith('}')) {
+    try {
+      const parsed = JSON.parse(input);
+      if (parsed.tokenId) return parsed.tokenId;
+    } catch(e) {}
+  }
+  // If it's a URL with ?token=...
+  if (input.includes('token=')) {
+    return input.split('token=')[1].split('&')[0];
+  }
+  // If it's a full URL path with trailing ID
+  if (input.startsWith('http://') || input.startsWith('https://')) {
+    try {
+      const url = new URL(input);
+      const t = url.searchParams.get('token');
+      if (t) return t;
+      return url.pathname.split('/').filter(Boolean).pop() || input;
+    } catch(e) {}
+  }
+  return input;
+}
+
+// ─── Access Patient ───
+async function accessPatient() {
+  const raw = document.getElementById('tokenInput').value.trim();
+  if (!raw) return provShowToast('Please enter a consent token', 'error');
+  const tokenId = extractToken(raw);
+  currentTokenId = tokenId;
+  provShowToast('⏳ Loading patient records...', 'info');
+  try {
+    const r = await fetch(`${API}/provider/access/${tokenId}`, { headers:{ Authorization: provToken ? `Bearer ${provToken}` : '', 'x-provider-id': providerData?.id || 'anonymous' } });
+    const data = await r.json();
+    if (r.status === 403) {
+      document.getElementById('revokedTitle').textContent = data.error === 'CONSENT_REVOKED' ? '🚫 Consent Revoked' : '⏱ QR Code Expired';
+      document.getElementById('revokedMessage').textContent = data.message;
+      showProvSection('revoked');
+      return;
+    }
+    if (!r.ok) return provShowToast('❌ ' + (data.error || 'Access failed'), 'error');
+    patientRecord = data;
+    renderPatientRecord(data);
+    showProvSection('records');
+    provShowToast('✅ Records loaded! Access granted by patient', 'success');
+    getAISummary();
+  } catch(e) { provShowToast('❌ Server error', 'error'); }
+}
+
+// ─── Render Records ───
+function renderPatientRecord(data) {
+  const p = data.patient;
+  const h = p.medicalHistory || {};
+  document.getElementById('prov-patientName').textContent = p.name;
+  document.getElementById('prov-patientDob').textContent = `DOB: ${p.dob} | ${p.gender} | ${p.bloodGroup}`;
+  document.getElementById('prov-patientAbha').textContent = `ABHA: ${p.abhaId}`;
+  document.getElementById('prov-bloodGroup').textContent = p.bloodGroup;
+  document.getElementById('prov-expiresAt').textContent = new Date(data.tokenExpiresAt).toLocaleTimeString();
+  document.getElementById('patientScopeBadge').textContent = data.scope.toUpperCase();
+
+  // Allergies Alert
+  const allergies = p.allergies || h.allergies || [];
+  if (allergies.length) {
+    document.getElementById('prov-allergyAlert').classList.remove('hidden');
+    document.getElementById('prov-allergyList').innerHTML = allergies.map(a =>
+      `<div class="flex items-center gap-2"><span class="font-bold text-red-800">${a.substance}</span><span class="text-red-600 text-sm">→ ${a.reaction} <strong>(${a.severity})</strong></span></div>`
+    ).join('');
+  }
+
+  // Medications
+  const meds = p.medications || h.medications || [];
+  document.getElementById('prov-active-meds').innerHTML = meds.length ? meds.map(m => `
+    <div class="glass rounded-xl p-3 shadow-sm flex items-center gap-3 card-hover">
+      <div class="w-9 h-9 ${m.status==='Active'?'bg-blue-100':'bg-gray-100'} rounded-xl flex items-center justify-center flex-shrink-0">
+        <i class="fas fa-pills ${m.status==='Active'?'text-blue-600':'text-gray-400'} text-sm"></i>
+      </div>
+      <div class="flex-1">
+        <div class="flex items-center gap-2">
+          <p class="font-semibold text-gray-900 text-sm">${m.name}</p>
+          <span class="text-xs px-1.5 py-0.5 rounded-full ${m.status==='Active'?'bg-blue-100 text-blue-700':'bg-gray-100 text-gray-500'}">${m.status}</span>
+        </div>
+        <p class="text-gray-600 text-xs">${m.dosage}</p>
+        <p class="text-gray-400 text-xs">By ${m.prescribedBy || m.recordedBy || 'Unknown'}</p>
+      </div>
+    </div>
+  `).join('') : '<p class="text-gray-400 text-sm text-center py-4">No medications on record</p>';
+
+  // Allergy list tab
+  document.getElementById('prov-allergies').innerHTML = allergies.length ? allergies.map(a => `
+    <div class="${a.severity==='High'?'allergy-critical':'allergy-moderate'} rounded-xl p-3 card-hover">
+      <div class="flex items-center gap-2">
+        <i class="fas fa-exclamation-triangle ${a.severity==='High'?'text-red-600':'text-yellow-600'}"></i>
+        <span class="font-bold text-gray-900 text-sm">${a.substance}</span>
+        <span class="text-xs px-2 py-0.5 rounded-full font-medium ${a.severity==='High'?'bg-red-100 text-red-700':'bg-yellow-100 text-yellow-700'}">${a.severity}</span>
+      </div>
+      <p class="text-gray-600 text-sm mt-1">${a.reaction}</p>
+      <p class="text-gray-400 text-xs">Recorded: ${a.recordedAt || 'Unknown'} by ${a.recordedBy || 'Unknown'}</p>
+    </div>
+  `).join('') : '<p class="text-gray-400 text-sm text-center py-4">No allergies recorded</p>';
+
+  // Conditions
+  const conditions = p.conditions || h.conditions || [];
+  document.getElementById('prov-conditions').innerHTML = conditions.length ? conditions.map(c => `
+    <div class="glass rounded-xl p-3 shadow-sm card-hover">
+      <div class="flex items-center gap-2">
+        <i class="fas fa-stethoscope text-purple-600"></i>
+        <span class="font-semibold text-gray-900 text-sm">${c.name}</span>
+        <span class="text-xs px-2 py-0.5 rounded-full ${c.status==='Ongoing'?'bg-orange-100 text-orange-700':'bg-green-100 text-green-700'}">${c.status}</span>
+      </div>
+      <p class="text-gray-500 text-xs mt-1">${c.notes} • Since ${c.diagnosedAt}</p>
+    </div>
+  `).join('') : '<p class="text-gray-400 text-sm text-center py-4">No conditions recorded</p>';
+
+  // Labs
+  const labs = h.labResults || [];
+  document.getElementById('prov-labs').innerHTML = labs.length ? labs.map(l => `
+    <div class="glass rounded-xl p-3 shadow-sm card-hover">
+      <div class="flex items-center justify-between">
+        <div>
+          <p class="font-semibold text-gray-900 text-sm">${l.test}</p>
+          <p class="text-blue-700 font-bold">${l.result} <span class="text-gray-400 font-normal text-xs">(Normal: ${l.normalRange})</span></p>
+          <p class="text-gray-500 text-xs">${l.interpretation}</p>
+        </div>
+        <div class="text-right text-xs text-gray-400">
+          <p>${l.date}</p>
+          <p>${l.lab}</p>
+        </div>
+      </div>
+    </div>
+  `).join('') : '<p class="text-gray-400 text-sm text-center py-4">No lab results in this scope</p>';
+
+  // Visits
+  const visits = h.visits || [];
+  document.getElementById('prov-visits').innerHTML = visits.length ? visits.map(v => `
+    <div class="glass rounded-xl p-3 shadow-sm card-hover">
+      <p class="font-semibold text-gray-900 text-sm">${v.provider}</p>
+      <p class="text-gray-400 text-xs">${v.date} • ${v.reason}</p>
+      <p class="text-gray-700 text-sm mt-1"><strong>Dx:</strong> ${v.diagnosis}</p>
+      <p class="text-gray-600 text-sm"><strong>Rx:</strong> ${v.prescription}</p>
+    </div>
+  `).join('') : '<p class="text-gray-400 text-sm text-center py-4">No visit history in this scope</p>';
+
+  showProvRecordTab('active-meds');
+}
+
+function showProvRecordTab(tab) {
+  ['active-meds','allergies','conditions','labs','visits'].forEach(t => {
+    document.getElementById(`prov-${t}`).classList.toggle('hidden', t !== tab);
+  });
+  document.querySelectorAll('.section-tab').forEach((btn, i) => {
+    const tabs = ['active-meds','allergies','conditions','labs','visits'];
+    btn.className = `section-tab text-xs px-3 py-1.5 rounded-full font-medium whitespace-nowrap transition ${tabs[i]===tab?'active bg-emerald-600 text-white':'bg-gray-200 text-gray-700 hover:bg-gray-300'}`;
+  });
+}
+
+// ─── AI Summary ───
+async function getAISummary() {
+  if (!currentTokenId) return;
+  document.getElementById('aiSummaryBox').innerHTML = '<span class="ai-thinking text-gray-500 text-sm">Generating clinical summary</span>';
+  try {
+    const r = await fetch(`${API}/ai/summary`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ tokenId: currentTokenId }) });
+    const data = await r.json();
+    document.getElementById('aiSummaryBox').innerHTML = `<p class="text-sm text-gray-700 whitespace-pre-wrap">${data.summary}</p><p class="text-xs text-gray-400 mt-2">Generated: ${new Date(data.generatedAt).toLocaleTimeString()}</p>`;
+  } catch(e) {
+    document.getElementById('aiSummaryBox').innerHTML = '<span class="text-red-500 text-sm">Failed to generate summary</span>';
+  }
+}
+
+async function askProviderAI() {
+  const query = document.getElementById('provAiInput').value.trim();
+  if (!query || !currentTokenId) return;
+  document.getElementById('provAiInput').value = '';
+  document.getElementById('aiSummaryBox').innerHTML = `<span class="ai-thinking text-gray-500 text-sm">Answering: "${query}"</span>`;
+  try {
+    const r = await fetch(`${API}/ai/summary`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ tokenId: currentTokenId, query }) });
+    const data = await r.json();
+    document.getElementById('aiSummaryBox').innerHTML = `<p class="text-sm font-medium text-gray-500 mb-1">Q: ${query}</p><p class="text-sm text-gray-700 whitespace-pre-wrap">${data.summary}</p>`;
+  } catch(e) {
+    document.getElementById('aiSummaryBox').innerHTML = '<span class="text-red-500 text-sm">Query failed</span>';
+  }
+}
+
+// ─── Add Record ───
+async function addProviderRecord() {
+  if (!currentTokenId || !provToken) return provShowToast('Not authorized', 'error');
+  const type = document.getElementById('addRecordType').value;
+  const rawData = document.getElementById('addRecordData').value.trim();
+  if (!rawData) return provShowToast('Please enter record details', 'error');
+
+  let recordData = {};
+  if (type === 'visit') recordData = { reason: 'Consultation', diagnosis: rawData, prescription: 'Per provider notes', notes: rawData };
+  else if (type === 'medication') recordData = { name: rawData, dosage: 'As prescribed', startDate: new Date().toISOString().split('T')[0], status: 'Active' };
+  else if (type === 'lab') recordData = { test: rawData, result: 'Pending', date: new Date().toISOString().split('T')[0], normalRange: 'See report' };
+  else if (type === 'allergy') recordData = { substance: rawData, severity: 'Moderate', reaction: 'To be monitored', recordedAt: new Date().toISOString().split('T')[0] };
+
+  try {
+    const r = await fetch(`${API}/provider/add-record`, { method:'POST', headers:{'Content-Type':'application/json', Authorization:`Bearer ${provToken}`}, body:JSON.stringify({ tokenId: currentTokenId, recordType: type, recordData }) });
+    const data = await r.json();
+    if (!r.ok) return provShowToast('❌ ' + data.error, 'error');
+    document.getElementById('addRecordData').value = '';
+    provShowToast('✅ Record saved to patient file', 'success');
+    // Reload patient records so the new entry shows immediately
+    await accessPatient();
+  } catch(e) { provShowToast('❌ Failed to save record', 'error'); }
+}
+
+// ─── Navigation ───
+function showProvSection(section) {
+  ['scan','records','revoked'].forEach(s => document.getElementById(`prov-${s}`).classList.toggle('hidden', s !== section));
+  if (section === 'scan') { document.getElementById('tokenInput').value = ''; currentTokenId = null; }
+}
+
+function provShowToast(msg, type='info') {
+  const t = document.getElementById('provToast');
+  const tm = document.getElementById('provToastMsg');
+  tm.textContent = msg;
+  tm.className = `px-5 py-3 rounded-2xl shadow-xl text-sm font-medium ${type==='error'?'bg-red-600':type==='success'?'bg-green-600':'bg-gray-900'} text-white`;
+  t.classList.remove('hidden');
+  setTimeout(() => t.classList.add('hidden'), 3500);
+}
+</script>
+</body>
+</html>
